@@ -15,6 +15,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated.dashboard'
 import { Route as AuthenticatedDesempenhoRouteImport } from './routes/_authenticated.desempenho'
 import { Route as AuthenticatedHistoricoRouteImport } from './routes/_authenticated.historico'
+import { Route as AuthenticatedJornadasRouteImport } from './routes/_authenticated.jornadas'
 import { Route as ApiPublicBotRouteImport } from './routes/api/public/bot'
 import { Route as ApiPublicTelegramWebhookRouteImport } from './routes/api/public/telegram-webhook'
 import { Route as ApiPublicTgRouteImport } from './routes/api/public/tg'
@@ -48,6 +49,11 @@ const AuthenticatedHistoricoRoute = AuthenticatedHistoricoRouteImport.update({
   path: '/historico',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedJornadasRoute = AuthenticatedJornadasRouteImport.update({
+  id: '/jornadas',
+  path: '/jornadas',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const ApiPublicBotRoute = ApiPublicBotRouteImport.update({
   id: '/api/public/bot',
   path: '/api/public/bot',
@@ -71,6 +77,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/desempenho': typeof AuthenticatedDesempenhoRoute
   '/historico': typeof AuthenticatedHistoricoRoute
+  '/jornadas': typeof AuthenticatedJornadasRoute
   '/api/public/bot': typeof ApiPublicBotRoute
   '/api/public/telegram-webhook': typeof ApiPublicTelegramWebhookRoute
   '/api/public/tg': typeof ApiPublicTgRoute
@@ -81,6 +88,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/desempenho': typeof AuthenticatedDesempenhoRoute
   '/historico': typeof AuthenticatedHistoricoRoute
+  '/jornadas': typeof AuthenticatedJornadasRoute
   '/api/public/bot': typeof ApiPublicBotRoute
   '/api/public/telegram-webhook': typeof ApiPublicTelegramWebhookRoute
   '/api/public/tg': typeof ApiPublicTgRoute
@@ -93,6 +101,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/desempenho': typeof AuthenticatedDesempenhoRoute
   '/_authenticated/historico': typeof AuthenticatedHistoricoRoute
+  '/_authenticated/jornadas': typeof AuthenticatedJornadasRoute
   '/api/public/bot': typeof ApiPublicBotRoute
   '/api/public/telegram-webhook': typeof ApiPublicTelegramWebhookRoute
   '/api/public/tg': typeof ApiPublicTgRoute
@@ -105,6 +114,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/desempenho'
     | '/historico'
+    | '/jornadas'
     | '/api/public/bot'
     | '/api/public/telegram-webhook'
     | '/api/public/tg'
@@ -115,6 +125,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/desempenho'
     | '/historico'
+    | '/jornadas'
     | '/api/public/bot'
     | '/api/public/telegram-webhook'
     | '/api/public/tg'
@@ -126,6 +137,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/desempenho'
     | '/_authenticated/historico'
+    | '/_authenticated/jornadas'
     | '/api/public/bot'
     | '/api/public/telegram-webhook'
     | '/api/public/tg'
@@ -184,6 +196,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedHistoricoRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/jornadas': {
+      id: '/_authenticated/jornadas'
+      path: '/jornadas'
+      fullPath: '/jornadas'
+      preLoaderRoute: typeof AuthenticatedJornadasRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/api/public/bot': {
       id: '/api/public/bot'
       path: '/api/public/bot'
@@ -212,12 +231,14 @@ interface AuthenticatedRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedDesempenhoRoute: typeof AuthenticatedDesempenhoRoute
   AuthenticatedHistoricoRoute: typeof AuthenticatedHistoricoRoute
+  AuthenticatedJornadasRoute: typeof AuthenticatedJornadasRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedDesempenhoRoute: AuthenticatedDesempenhoRoute,
   AuthenticatedHistoricoRoute: AuthenticatedHistoricoRoute,
+  AuthenticatedJornadasRoute: AuthenticatedJornadasRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
