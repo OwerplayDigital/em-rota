@@ -6,7 +6,8 @@ import {
   ChevronRight,
   LogOut,
   Smartphone,
-  X
+  X,
+  Map
 } from 'lucide-react'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { cn } from '@/lib/utils'
@@ -17,6 +18,7 @@ import { toast } from 'sonner'
 
 const navItems = [
   { label: 'Dashboard', icon: LayoutDashboard, href: '/dashboard' },
+  { label: 'Jornadas', icon: Map, href: '/jornadas' },
   { label: 'Histórico', icon: History, href: '/historico' },
   { label: 'Desempenho', icon: TrendingUp, href: '/desempenho' },
 ]
