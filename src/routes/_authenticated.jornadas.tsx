@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { CalendarDays, Clock3, Map, Play, Plus, RefreshCw } from 'lucide-react'
+import { CalendarDays, Clock3, Map, Play, Plus, RefreshCw, Square } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
 import { Card, CardContent } from '@/components/ui/card'
@@ -15,6 +15,7 @@ type WorkDay = {
   date: string
   status: 'in_progress' | 'completed'
   odometer_start: number | null
+  odometer_end?: number | null
 }
 
 type Journey = {
@@ -53,14 +54,17 @@ function JornadasPage() {
   const [journeys, setJourneys] = useState<Journey[]>([])
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
+  const [ending, setEnding] = useState(false)
   const [showForm, setShowForm] = useState(false)
+  const [showEndForm, setShowEndForm] = useState(false)
   const [odometer, setOdometer] = useState('')
+  const [endOdometer, setEndOdometer] = useState('')
 
   const loadJourneys = useCallback(async () => {
     setLoading(true)
     const { data, error } = await supabase
       .from('sessions')
-      .select('id, work_day_id, start_time, end_time, status, work_days(id, date, status, odometer_start)')
+      .select('id, work_day_id, start_time, end_time, status, work_days(id, date, status, odometer_start, odometer_end)')
       .order('start_time', { ascending: false })
       .limit(50)
 
@@ -144,6 +148,50 @@ function JornadasPage() {
     }
   }
 
+  const endJourney = async () => {
+    if (!activeJourney) {
+      toast.error('Não existe uma jornada em andamento.')
+      return
+    }
+
+    const odo = Number(endOdometer.replace(',', '.'))
+    const startOdo = Number(activeJourney.work_days?.odometer_start ?? 0)
+    if (!Number.isFinite(odo) || odo < 0) {
+      toast.error('Informe um odômetro final válido.')
+      return
+    }
+    if (activeJourney.work_days?.odometer_start !== null && odo < startOdo) {
+      toast.error(`O odômetro final não pode ser menor que o inicial (${startOdo.toLocaleString('pt-BR')} km).`)
+      return
+    }
+
+    setEnding(true)
+    try {
+      const { error: sessionError } = await supabase
+        .from('sessions')
+        .update({ end_time: new Date().toISOString(), status: 'completed' })
+        .eq('id', activeJourney.id)
+        .eq('status', 'active')
+      if (sessionError) throw sessionError
+
+      const { error: dayError } = await supabase
+        .from('work_days')
+        .update({ odometer_end: odo })
+        .eq('id', activeJourney.work_day_id)
+      if (dayError) throw dayError
+
+      toast.success('Jornada encerrada com sucesso.')
+      setEndOdometer('')
+      setShowEndForm(false)
+      await loadJourneys()
+    } catch (error) {
+      console.error(error)
+      toast.error('Não foi possível encerrar a jornada.')
+    } finally {
+      setEnding(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8 space-y-6">
       <div className="mt-2 pl-14 md:mt-0 md:pl-0 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -151,7 +199,7 @@ function JornadasPage() {
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900">Jornadas</h1>
           <p className="mt-1 text-sm text-slate-500">Crie e acompanhe suas jornadas diretamente pelo Em Rota.</p>
         </div>
-        <Button onClick={() => setShowForm((value) => !value)} className="rounded-xl gap-2 self-start">
+        <Button onClick={() => setShowForm((value) => !value)} disabled={!!activeJourney} className="rounded-xl gap-2 self-start">
           <Plus className="h-4 w-4" />
           Nova jornada
         </Button>
@@ -171,14 +219,7 @@ function JornadasPage() {
             </div>
             <div className="max-w-sm space-y-2">
               <label htmlFor="odometer" className="text-xs font-semibold text-slate-600">Odômetro inicial (km)</label>
-              <input
-                id="odometer"
-                inputMode="decimal"
-                value={odometer}
-                onChange={(event) => setOdometer(event.target.value)}
-                placeholder="Ex.: 12540"
-                className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10"
-              />
+              <input id="odometer" inputMode="decimal" value={odometer} onChange={(event) => setOdometer(event.target.value)} placeholder="Ex.: 12540" className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10" />
               <div className="flex gap-2 pt-2">
                 <Button onClick={startJourney} disabled={creating || !!activeJourney} className="rounded-xl gap-2">
                   {creating ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
@@ -186,7 +227,6 @@ function JornadasPage() {
                 </Button>
                 <Button variant="outline" onClick={() => setShowForm(false)} className="rounded-xl">Cancelar</Button>
               </div>
-              {activeJourney && <p className="text-xs text-amber-700">Existe uma jornada ativa. Encerre-a antes de iniciar outra.</p>}
             </div>
           </CardContent>
         </Card>
@@ -194,15 +234,28 @@ function JornadasPage() {
 
       {activeJourney && (
         <Card className="rounded-2xl border-emerald-200 bg-emerald-50/50 shadow-sm">
-          <CardContent className="p-5 flex items-center gap-4">
-            <div className="relative h-11 w-11 rounded-xl bg-white flex items-center justify-center border border-emerald-100">
-              <Map className="h-5 w-5 text-emerald-700" />
-              <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-emerald-500 border-2 border-white" />
+          <CardContent className="p-5 space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="relative h-11 w-11 rounded-xl bg-white flex items-center justify-center border border-emerald-100">
+                <Map className="h-5 w-5 text-emerald-700" />
+                <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-emerald-500 border-2 border-white" />
+              </div>
+              <div className="flex-1">
+                <div className="text-sm font-semibold text-emerald-900">Jornada em andamento</div>
+                <div className="text-xs text-emerald-700 mt-1">Iniciada às {formatTime(activeJourney.start_time)} · {formatDate(activeJourney.work_days?.date)}</div>
+              </div>
+              {!showEndForm && <Button variant="outline" onClick={() => setShowEndForm(true)} className="rounded-xl gap-2 border-emerald-300 text-emerald-800"><Square className="h-3.5 w-3.5" />Encerrar jornada</Button>}
             </div>
-            <div className="flex-1">
-              <div className="text-sm font-semibold text-emerald-900">Jornada em andamento</div>
-              <div className="text-xs text-emerald-700 mt-1">Iniciada às {formatTime(activeJourney.start_time)} · {formatDate(activeJourney.work_days?.date)}</div>
-            </div>
+            {showEndForm && (
+              <div className="max-w-sm rounded-xl border border-emerald-200 bg-white p-4 space-y-2">
+                <label htmlFor="end-odometer" className="text-xs font-semibold text-slate-600">Odômetro final (km)</label>
+                <input id="end-odometer" inputMode="decimal" value={endOdometer} onChange={(event) => setEndOdometer(event.target.value)} placeholder={activeJourney.work_days?.odometer_start != null ? `Inicial: ${Number(activeJourney.work_days.odometer_start).toLocaleString('pt-BR')}` : 'Informe o odômetro final'} className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10" />
+                <div className="flex gap-2 pt-2">
+                  <Button onClick={endJourney} disabled={ending} className="rounded-xl gap-2">{ending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Square className="h-3.5 w-3.5" />}Confirmar encerramento</Button>
+                  <Button variant="outline" onClick={() => { setShowEndForm(false); setEndOdometer('') }} className="rounded-xl">Cancelar</Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -210,43 +263,16 @@ function JornadasPage() {
       <div>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold text-slate-800">Últimas jornadas</h2>
-          <button onClick={loadJourneys} className="text-xs text-slate-500 hover:text-blue-600 flex items-center gap-1.5">
-            <RefreshCw className="h-3.5 w-3.5" /> Atualizar
-          </button>
+          <button onClick={loadJourneys} className="text-xs text-slate-500 hover:text-blue-600 flex items-center gap-1.5"><RefreshCw className="h-3.5 w-3.5" /> Atualizar</button>
         </div>
-
         {loading ? (
           <Card className="rounded-2xl border-slate-200"><CardContent className="p-8 text-center text-sm text-slate-500">Carregando jornadas...</CardContent></Card>
         ) : journeys.length === 0 ? (
-          <Card className="rounded-2xl border-dashed border-slate-300 bg-white shadow-none">
-            <CardContent className="py-12 text-center">
-              <Map className="h-8 w-8 mx-auto text-slate-300 mb-3" />
-              <div className="text-sm font-semibold text-slate-700">Nenhuma jornada registrada</div>
-              <p className="text-xs text-slate-400 mt-1">Sua primeira jornada criada pelo site aparecerá aqui.</p>
-            </CardContent>
-          </Card>
+          <Card className="rounded-2xl border-dashed border-slate-300 bg-white shadow-none"><CardContent className="py-12 text-center"><Map className="h-8 w-8 mx-auto text-slate-300 mb-3" /><div className="text-sm font-semibold text-slate-700">Nenhuma jornada registrada</div><p className="text-xs text-slate-400 mt-1">Sua primeira jornada criada pelo site aparecerá aqui.</p></CardContent></Card>
         ) : (
           <div className="grid gap-3">
             {journeys.map((journey) => (
-              <Card key={journey.id} className="rounded-2xl border-slate-200 shadow-sm">
-                <CardContent className="p-4 md:p-5 flex items-center gap-4">
-                  <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${journey.status === 'active' ? 'bg-emerald-50' : 'bg-slate-100'}`}>
-                    <Map className={`h-4 w-4 ${journey.status === 'active' ? 'text-emerald-600' : 'text-slate-500'}`} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold text-sm text-slate-900">Jornada</span>
-                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${journey.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
-                        {journey.status === 'active' ? 'Em andamento' : 'Finalizada'}
-                      </span>
-                    </div>
-                    <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
-                      <span className="inline-flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5" />{formatDate(journey.work_days?.date)}</span>
-                      <span className="inline-flex items-center gap-1.5"><Clock3 className="h-3.5 w-3.5" />{formatTime(journey.start_time)} → {formatTime(journey.end_time)}</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <Card key={journey.id} className="rounded-2xl border-slate-200 shadow-sm"><CardContent className="p-4 md:p-5 flex items-center gap-4"><div className={`h-10 w-10 rounded-xl flex items-center justify-center ${journey.status === 'active' ? 'bg-emerald-50' : 'bg-slate-100'}`}><Map className={`h-4 w-4 ${journey.status === 'active' ? 'text-emerald-600' : 'text-slate-500'}`} /></div><div className="flex-1 min-w-0"><div className="flex items-center gap-2 flex-wrap"><span className="font-semibold text-sm text-slate-900">Jornada</span><span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${journey.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>{journey.status === 'active' ? 'Em andamento' : 'Finalizada'}</span></div><div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500"><span className="inline-flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5" />{formatDate(journey.work_days?.date)}</span><span className="inline-flex items-center gap-1.5"><Clock3 className="h-3.5 w-3.5" />{formatTime(journey.start_time)} → {formatTime(journey.end_time)}</span></div></div></CardContent></Card>
             ))}
           </div>
         )}
