@@ -1,10 +1,22 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { CalendarDays, Clock3, Map, Play, Plus, RefreshCw, Square, Trash2 } from 'lucide-react'
+import {
+  CalendarDays,
+  CheckCircle2,
+  Clock3,
+  Flag,
+  Map,
+  Play,
+  Plus,
+  RefreshCw,
+  Square,
+  Trash2,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { fromCents, toCents } from '@/lib/money'
 
 export const Route = createFileRoute('/_authenticated/jornadas')({ component: JornadasPage })
 
@@ -13,7 +25,11 @@ type WorkDay = {
   date: string
   status: 'in_progress' | 'completed'
   odometer_start: number | null
-  odometer_end?: number | null
+  odometer_end: number | null
+  uber_earned: number | null
+  ifood_earned: number | null
+  total_earned: number | null
+  total_deliveries: number | null
 }
 
 type Journey = {
@@ -26,8 +42,31 @@ type Journey = {
 }
 
 function localDate() {
-  const now = new Date()
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date())
+
+  const year = parts.find((part) => part.type === 'year')?.value
+  const month = parts.find((part) => part.type === 'month')?.value
+  const day = parts.find((part) => part.type === 'day')?.value
+  return `${year}-${month}-${day}`
+}
+
+function parseNumberBR(value: string) {
+  const trimmed = value.trim()
+  if (!trimmed) return Number.NaN
+
+  let normalized = trimmed.replace(/\s/g, '')
+  if (normalized.includes(',') && normalized.includes('.')) {
+    normalized = normalized.replace(/\./g, '').replace(',', '.')
+  } else if (normalized.includes(',')) {
+    normalized = normalized.replace(',', '.')
+  }
+
+  return Number(normalized)
 }
 
 function formatDate(value?: string) {
@@ -47,24 +86,45 @@ function formatTime(value?: string | null) {
 
 function JornadasPage() {
   const [journeys, setJourneys] = useState<Journey[]>([])
+  const [todayDay, setTodayDay] = useState<WorkDay | null>(null)
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
   const [ending, setEnding] = useState(false)
+  const [closing, setClosing] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
+  const [showCloseForm, setShowCloseForm] = useState(false)
   const [odometer, setOdometer] = useState('')
+  const [closeOdometer, setCloseOdometer] = useState('')
+  const [uberEarned, setUberEarned] = useState('')
+  const [ifoodEarned, setIfoodEarned] = useState('')
+  const [deliveries, setDeliveries] = useState('')
 
   const loadJourneys = useCallback(async () => {
     setLoading(true)
-    const { data, error } = await supabase
-      .from('sessions')
-      .select('id, work_day_id, start_time, end_time, status, work_days(id, date, status, odometer_start, odometer_end)')
-      .order('start_time', { ascending: false })
-      .limit(50)
 
-    if (error) toast.error('Não foi possível carregar as jornadas.')
-    else setJourneys((data ?? []) as unknown as Journey[])
+    const [sessionsResult, dayResult] = await Promise.all([
+      supabase
+        .from('sessions')
+        .select('id, work_day_id, start_time, end_time, status, work_days(id, date, status, odometer_start, odometer_end, uber_earned, ifood_earned, total_earned, total_deliveries)')
+        .order('start_time', { ascending: false })
+        .limit(50),
+      supabase
+        .from('work_days')
+        .select('id, date, status, odometer_start, odometer_end, uber_earned, ifood_earned, total_earned, total_deliveries')
+        .eq('date', localDate())
+        .maybeSingle(),
+    ])
+
+    if (sessionsResult.error || dayResult.error) {
+      console.error(sessionsResult.error ?? dayResult.error)
+      toast.error('Não foi possível carregar as jornadas.')
+    } else {
+      setJourneys((sessionsResult.data ?? []) as unknown as Journey[])
+      setTodayDay((dayResult.data ?? null) as WorkDay | null)
+    }
+
     setLoading(false)
   }, [])
 
@@ -77,12 +137,7 @@ function JornadasPage() {
     [journeys]
   )
 
-  const todayJourney = useMemo(
-    () => journeys.find((journey) => journey.work_days?.date === localDate()),
-    [journeys]
-  )
-
-  const todayOdometerStart = todayJourney?.work_days?.odometer_start ?? null
+  const todayOdometerStart = todayDay?.odometer_start ?? null
 
   const startJourney = async () => {
     if (activeJourney) {
@@ -108,7 +163,7 @@ function JornadasPage() {
       let workDayId = existingDay?.id
 
       if (!existingDay || existingDay.odometer_start === null) {
-        const odo = Number(odometer.replace(',', '.'))
+        const odo = parseNumberBR(odometer)
         if (!Number.isFinite(odo) || odo < 0) {
           toast.error('Informe um odômetro inicial válido.')
           return
@@ -176,6 +231,95 @@ function JornadasPage() {
     }
   }
 
+  const closeDay = async () => {
+    setClosing(true)
+    try {
+      const { data: activeSession, error: activeError } = await supabase
+        .from('sessions')
+        .select('id')
+        .eq('status', 'active')
+        .maybeSingle()
+
+      if (activeError) throw activeError
+      if (activeSession) {
+        toast.error('Encerre a jornada em andamento antes de fechar o dia.')
+        return
+      }
+
+      const { data: day, error: dayError } = await supabase
+        .from('work_days')
+        .select('id, status, odometer_start')
+        .eq('date', localDate())
+        .maybeSingle()
+
+      if (dayError) throw dayError
+      if (!day) {
+        toast.error('Nenhum dia de trabalho encontrado para hoje.')
+        return
+      }
+      if (day.status === 'completed') {
+        toast.error('O dia de hoje já está fechado.')
+        return
+      }
+
+      const finalOdometer = parseNumberBR(closeOdometer)
+      const startOdometer = Number(day.odometer_start)
+      const uber = parseNumberBR(uberEarned)
+      const ifood = parseNumberBR(ifoodEarned)
+      const deliveryCount = parseNumberBR(deliveries)
+
+      if (!Number.isFinite(finalOdometer) || finalOdometer < startOdometer) {
+        toast.error(`O odômetro final deve ser igual ou maior que ${startOdometer.toLocaleString('pt-BR')} km.`)
+        return
+      }
+      if (!Number.isFinite(uber) || uber < 0) {
+        toast.error('Informe um valor válido para os ganhos da Uber, ou 0.')
+        return
+      }
+      if (!Number.isFinite(ifood) || ifood < 0) {
+        toast.error('Informe um valor válido para os ganhos do iFood, ou 0.')
+        return
+      }
+      if (!Number.isFinite(deliveryCount) || deliveryCount < 0 || !Number.isInteger(deliveryCount)) {
+        toast.error('Informe uma quantidade inteira válida de entregas.')
+        return
+      }
+
+      const uberValue = fromCents(toCents(uber))
+      const ifoodValue = fromCents(toCents(ifood))
+      const totalEarned = fromCents(toCents(uber) + toCents(ifood))
+
+      const { error } = await supabase
+        .from('work_days')
+        .update({
+          odometer_end: finalOdometer,
+          uber_earned: uberValue,
+          ifood_earned: ifoodValue,
+          total_earned: totalEarned,
+          total_deliveries: deliveryCount,
+          status: 'completed',
+          notes: null,
+        })
+        .eq('id', day.id)
+        .eq('status', 'in_progress')
+
+      if (error) throw error
+
+      toast.success('Dia fechado com sucesso.')
+      setShowCloseForm(false)
+      setCloseOdometer('')
+      setUberEarned('')
+      setIfoodEarned('')
+      setDeliveries('')
+      await loadJourneys()
+    } catch (error) {
+      console.error(error)
+      toast.error('Não foi possível fechar o dia.')
+    } finally {
+      setClosing(false)
+    }
+  }
+
   const deleteJourney = async (journey: Journey) => {
     if (journey.status === 'active') {
       toast.error('Encerre a jornada antes de excluí-la.')
@@ -210,7 +354,11 @@ function JornadasPage() {
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900">Jornadas</h1>
           <p className="mt-1 text-sm text-slate-500">Crie e acompanhe suas jornadas diretamente pelo Em Rota.</p>
         </div>
-        <Button onClick={() => setShowForm((value) => !value)} disabled={!!activeJourney} className="rounded-xl gap-2 self-start">
+        <Button
+          onClick={() => setShowForm((value) => !value)}
+          disabled={!!activeJourney || todayDay?.status === 'completed'}
+          className="rounded-xl gap-2 self-start"
+        >
           <Plus className="h-4 w-4" />
           Nova jornada
         </Button>
@@ -284,6 +432,111 @@ function JornadasPage() {
                 Encerrar jornada
               </Button>
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {todayDay && (
+        <Card className={`rounded-2xl shadow-sm ${todayDay.status === 'completed' ? 'border-emerald-200 bg-emerald-50/40' : 'border-slate-200'}`}>
+          <CardContent className="p-5 md:p-6">
+            {todayDay.status === 'completed' ? (
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-white border border-emerald-100 flex items-center justify-center">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                </div>
+                <div>
+                  <h2 className="font-semibold text-emerald-900">Dia fechado</h2>
+                  <p className="text-xs text-emerald-700 mt-0.5">Os dados finais de hoje já foram registrados.</p>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center">
+                      <Flag className="h-4 w-4 text-slate-600" />
+                    </div>
+                    <div>
+                      <h2 className="font-semibold text-slate-900">Fechar dia</h2>
+                      <p className="text-xs text-slate-500 mt-0.5">Registre os dados finais somente quando terminar o trabalho de hoje.</p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    disabled={!!activeJourney}
+                    onClick={() => setShowCloseForm((value) => !value)}
+                    className="w-full sm:w-auto rounded-xl gap-2"
+                  >
+                    <Flag className="h-4 w-4" />
+                    Fechar dia
+                  </Button>
+                </div>
+
+                {activeJourney && (
+                  <p className="mt-3 text-xs text-amber-700">Encerre a jornada em andamento antes de fechar o dia.</p>
+                )}
+
+                {showCloseForm && !activeJourney && (
+                  <div className="mt-5 border-t border-slate-100 pt-5">
+                    <div className="grid gap-4 sm:grid-cols-2 max-w-2xl">
+                      <label className="space-y-1.5 text-xs font-semibold text-slate-600">
+                        Odômetro final (km)
+                        <input
+                          inputMode="decimal"
+                          value={closeOdometer}
+                          onChange={(event) => setCloseOdometer(event.target.value)}
+                          placeholder={`Mínimo: ${Number(todayDay.odometer_start ?? 0).toLocaleString('pt-BR')}`}
+                          className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-normal text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10"
+                        />
+                      </label>
+
+                      <label className="space-y-1.5 text-xs font-semibold text-slate-600">
+                        Ganhos Uber (R$)
+                        <input
+                          inputMode="decimal"
+                          value={uberEarned}
+                          onChange={(event) => setUberEarned(event.target.value)}
+                          placeholder="Ex.: 85,50 ou 0"
+                          className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-normal text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10"
+                        />
+                      </label>
+
+                      <label className="space-y-1.5 text-xs font-semibold text-slate-600">
+                        Ganhos iFood (R$)
+                        <input
+                          inputMode="decimal"
+                          value={ifoodEarned}
+                          onChange={(event) => setIfoodEarned(event.target.value)}
+                          placeholder="Ex.: 120,00 ou 0"
+                          className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-normal text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10"
+                        />
+                      </label>
+
+                      <label className="space-y-1.5 text-xs font-semibold text-slate-600">
+                        Entregas
+                        <input
+                          inputMode="numeric"
+                          value={deliveries}
+                          onChange={(event) => setDeliveries(event.target.value)}
+                          placeholder="Ex.: 12"
+                          className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-normal text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10"
+                        />
+                      </label>
+                    </div>
+
+                    <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+                      <Button onClick={closeDay} disabled={closing} className="w-full sm:w-auto rounded-xl gap-2">
+                        {closing ? <RefreshCw className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                        Confirmar fechamento
+                      </Button>
+                      <Button variant="outline" onClick={() => setShowCloseForm(false)} disabled={closing} className="w-full sm:w-auto rounded-xl">
+                        Cancelar
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </CardContent>
         </Card>
       )}
