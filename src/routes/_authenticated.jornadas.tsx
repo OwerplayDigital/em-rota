@@ -234,25 +234,36 @@ function JornadasPage() {
 
       {activeJourney && (
         <Card className="rounded-2xl border-emerald-200 bg-emerald-50/50 shadow-sm">
-          <CardContent className="p-5 space-y-4">
-            <div className="flex items-center gap-4">
-              <div className="relative h-11 w-11 rounded-xl bg-white flex items-center justify-center border border-emerald-100">
-                <Map className="h-5 w-5 text-emerald-700" />
-                <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-emerald-500 border-2 border-white" />
+          <CardContent className="p-4 sm:p-5 space-y-4">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+              <div className="flex min-w-0 items-center gap-3 sm:flex-1">
+                <div className="relative h-11 w-11 shrink-0 rounded-xl bg-white flex items-center justify-center border border-emerald-100">
+                  <Map className="h-5 w-5 text-emerald-700" />
+                  <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-emerald-500 border-2 border-white" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-base font-semibold leading-tight text-emerald-900">Jornada em andamento</div>
+                  <div className="text-sm text-emerald-700 mt-1">Iniciada às {formatTime(activeJourney.start_time)} · {formatDate(activeJourney.work_days?.date)}</div>
+                </div>
               </div>
-              <div className="flex-1">
-                <div className="text-sm font-semibold text-emerald-900">Jornada em andamento</div>
-                <div className="text-xs text-emerald-700 mt-1">Iniciada às {formatTime(activeJourney.start_time)} · {formatDate(activeJourney.work_days?.date)}</div>
-              </div>
-              {!showEndForm && <Button variant="outline" onClick={() => setShowEndForm(true)} className="rounded-xl gap-2 border-emerald-300 text-emerald-800"><Square className="h-3.5 w-3.5" />Encerrar jornada</Button>}
+              {!showEndForm && (
+                <Button
+                  variant="outline"
+                  onClick={() => setShowEndForm(true)}
+                  className="w-full sm:w-auto shrink-0 rounded-xl gap-2 border-emerald-300 text-emerald-800"
+                >
+                  <Square className="h-3.5 w-3.5" />
+                  Encerrar jornada
+                </Button>
+              )}
             </div>
             {showEndForm && (
-              <div className="max-w-sm rounded-xl border border-emerald-200 bg-white p-4 space-y-2">
+              <div className="w-full sm:max-w-sm rounded-xl border border-emerald-200 bg-white p-4 space-y-2">
                 <label htmlFor="end-odometer" className="text-xs font-semibold text-slate-600">Odômetro final (km)</label>
                 <input id="end-odometer" inputMode="decimal" value={endOdometer} onChange={(event) => setEndOdometer(event.target.value)} placeholder={activeJourney.work_days?.odometer_start != null ? `Inicial: ${Number(activeJourney.work_days.odometer_start).toLocaleString('pt-BR')}` : 'Informe o odômetro final'} className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10" />
-                <div className="flex gap-2 pt-2">
-                  <Button onClick={endJourney} disabled={ending} className="rounded-xl gap-2">{ending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Square className="h-3.5 w-3.5" />}Confirmar encerramento</Button>
-                  <Button variant="outline" onClick={() => { setShowEndForm(false); setEndOdometer('') }} className="rounded-xl">Cancelar</Button>
+                <div className="flex flex-col gap-2 pt-2 sm:flex-row">
+                  <Button onClick={endJourney} disabled={ending} className="w-full sm:w-auto rounded-xl gap-2">{ending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Square className="h-3.5 w-3.5" />}Confirmar encerramento</Button>
+                  <Button variant="outline" onClick={() => { setShowEndForm(false); setEndOdometer('') }} className="w-full sm:w-auto rounded-xl">Cancelar</Button>
                 </div>
               </div>
             )}
