@@ -32,7 +32,7 @@ export const fromCents = (cents: number): number => Math.round(cents) / 100;
 
 /** Sum monetary values as integer cents; returns the total in cents. */
 export const sumCents = (values: Array<number | string | null | undefined>): number =>
-  values.reduce((acc, v) => acc + toCents(v), 0);
+  values.reduce<number>((acc, v) => acc + toCents(v), 0);
 
 /** Add two monetary values precisely; returns a BRL number with 2 decimals. */
 export const addMoney = (
