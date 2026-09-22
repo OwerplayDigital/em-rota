@@ -134,7 +134,7 @@ function AuthPage() {
                 {loading ? (
                   <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
                 ) : (
-                  isRegistering ? 'Criar Conta' : 'Entrar'
+                  'Entrar'
                 )}
               </Button>
             </form>
