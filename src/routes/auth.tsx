@@ -23,7 +23,6 @@ function AuthPage() {
   const search = useSearch({ from: '/auth' })
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [isRegistering, setIsRegistering] = useState(false)
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -44,35 +43,20 @@ function AuthPage() {
     setLoading(true)
 
     try {
-      if (isRegistering) {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              email_confirmed: true, // Auto-confirm logic if possible, otherwise user needs to confirm
-            }
-          }
-        })
-        if (error) throw error
-        toast.success('Conta criada! Agora faça o login.')
-        setIsRegistering(false)
-      } else {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        })
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
 
-        if (error) throw error
+      if (error) throw error
 
-        if (data.user?.email !== 'owertech82@gmail.com') {
-          await supabase.auth.signOut()
-          throw new Error('Acesso negado: e-mail não autorizado.')
-        }
-
-        toast.success('Bem-vindo ao Em Rota!')
-        navigate({ to: search.redirect || '/dashboard' })
+      if (data.user?.email !== 'owertech82@gmail.com') {
+        await supabase.auth.signOut()
+        throw new Error('Acesso negado: e-mail não autorizado.')
       }
+
+      toast.success('Bem-vindo ao Em Rota!')
+      navigate({ to: search.redirect || '/dashboard' })
     } catch (error: any) {
       toast.error(error.message || 'Erro na autenticação')
     } finally {
@@ -154,15 +138,6 @@ function AuthPage() {
                 )}
               </Button>
             </form>
-            
-            <div className="mt-4 text-center">
-              <button
-                onClick={() => setIsRegistering(!isRegistering)}
-                className="text-xs text-primary hover:underline font-medium uppercase tracking-widest"
-              >
-                {isRegistering ? 'Já tenho conta' : 'Criar nova conta'}
-              </button>
-            </div>
 
             <div className="mt-8 pt-6 border-t border-border/50 text-center">
               <p className="text-[9px] text-muted-foreground font-light uppercase tracking-widest leading-relaxed">
