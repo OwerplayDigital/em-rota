@@ -131,7 +131,7 @@ export const handleTelegramUpdate = async (body: any) => {
 
     return `<b>RESUMO DE ${formatDateBR(day.date)}</b>\n\n` +
       `<b>Ganhos:</b>\n${formatCurrency(day.total_earned)} (iFood: ${formatCurrency(day.ifood_earned)} | Uber: ${formatCurrency(day.uber_earned)})\n\n` +
-      `<b>Entregas:</b>\n${day.total_deliveries ?? 'Ainda não informado'}\n\n` +
+      `<b>Entregas:</b>\n${day.total_deliveries ?? 'Ainda não informado'} (iFood: ${day.ifood_deliveries ?? 0} | Uber: ${day.uber_deliveries ?? 0})\n\n` +
       `<b>Distância:</b>\n${distance !== null ? `${formatNumberBR(distance)} km` : 'Ainda não informado'}\n\n` +
       `<b>Tempo na rua:</b>\n${formatDuration(totalMs)}\n\n` +
       `<b>Odômetro:</b>\n${formatNumberBR(day.odometer_start) ?? '?'}${day.odometer_end !== null ? ` → ${formatNumberBR(day.odometer_end)}` : ''} km\n\n` +
@@ -633,11 +633,15 @@ export const handleTelegramUpdate = async (body: any) => {
     const currentUberCents = toCents(activeDay.uber_earned);
     const nextIfoodCents = platform === 'IFOOD' ? currentIfoodCents + addCents : currentIfoodCents;
     const nextUberCents = platform === 'UBER' ? currentUberCents + addCents : currentUberCents;
+    const nextIfoodDeliveries = (Number(activeDay.ifood_deliveries) || 0) + (platform === 'IFOOD' ? 1 : 0);
+    const nextUberDeliveries = (Number(activeDay.uber_deliveries) || 0) + (platform === 'UBER' ? 1 : 0);
     const update = {
       ifood_earned: fromCents(nextIfoodCents),
       uber_earned: fromCents(nextUberCents),
       total_earned: fromCents(nextIfoodCents + nextUberCents),
-      total_deliveries: (Number(activeDay.total_deliveries) || 0) + 1,
+      ifood_deliveries: nextIfoodDeliveries,
+      uber_deliveries: nextUberDeliveries,
+      total_deliveries: nextIfoodDeliveries + nextUberDeliveries,
       notes: null
     };
     const { data, error } = await (supabaseAdmin.from('work_days').update(update).eq('id', activeDay.id).select().single() as any);
@@ -647,7 +651,7 @@ export const handleTelegramUpdate = async (body: any) => {
       return;
     }
     await send(
-      `<b>ENTREGA REGISTRADA</b>\n\niFood: ${formatCurrency(data.ifood_earned)}\nUber: ${formatCurrency(data.uber_earned)}\n<b>Total: ${formatCurrency(data.total_earned)}</b>\nEntregas: <b>${data.total_deliveries}</b>`,
+      `<b>ENTREGA REGISTRADA</b>\n\niFood: ${formatCurrency(data.ifood_earned)} · ${data.ifood_deliveries ?? 0} entrega(s)\nUber: ${formatCurrency(data.uber_earned)} · ${data.uber_deliveries ?? 0} entrega(s)\n<b>Total: ${formatCurrency(data.total_earned)} · ${data.total_deliveries ?? 0} entrega(s)</b>`,
       activeJourneyMenu
     );
     return;
