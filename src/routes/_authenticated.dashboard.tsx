@@ -32,7 +32,6 @@ function DashboardPage() {
     <div className="mx-auto flex h-full max-w-[480px] flex-col overflow-hidden px-[22px] pb-[18px] pt-5 max-[700px]:pb-3 max-[700px]:pt-[14px]">
       <header className="flex h-7 shrink-0 items-start justify-between text-[11px]">
         <b className="tracking-[.03em]">EM ROTA</b>
-        <span className="text-[#92969d]">{active ? '● trabalhando' : '● disponível'}</span>
       </header>
 
       <section className="relative mt-2 min-h-0 flex-1 max-[700px]:mt-1">
@@ -60,10 +59,6 @@ function DashboardPage() {
             detail={`${month.totalDistance.toLocaleString('pt-BR',{maximumFractionDigits:1})} km no mês · ganhos, tempo e eficiência`} />
         </>}
       </section>
-
-      <Link to="/jornadas" className="mt-2 flex h-[52px] shrink-0 items-center justify-center rounded-[18px] bg-[#f7f7f5] text-[13px] font-black text-[#111] max-[700px]:h-12">
-        {active ? 'ENCERRAR JORNADA' : 'INICIAR JORNADA'}
-      </Link>
     </div>
   </main>
 }
