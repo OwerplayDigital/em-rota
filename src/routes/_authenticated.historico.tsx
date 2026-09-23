@@ -23,10 +23,8 @@ export const Route = createFileRoute('/_authenticated/historico')({
 })
 
 const FILTERS = [
-  { id: 'todos', label: 'Todos' },
-  { id: 'semana', label: 'Esta Semana' },
+  { id: 'todos', label: 'Histórico' },
   { id: 'mes', label: 'Este Mês' },
-  { id: 'ano', label: 'Este Ano' },
 ] as const
 
 type FilterId = (typeof FILTERS)[number]['id']
@@ -58,14 +56,17 @@ function startOfMonthBR() {
 function dateRangeForFilter(filter: FilterId) {
   const endDate = todayStrBR()
   switch (filter) {
-    case 'semana':
-      return { startDate: startOfWeekBR(), endDate }
     case 'mes':
       return { startDate: startOfMonthBR(), endDate }
-    case 'ano':
-      return { startDate: `${getLocalDateString().slice(0, 4)}-01-01`, endDate }
-    default:
-      return { startDate: '2020-01-01', endDate }
+    default: {
+      const firstDayCurrentMonth = startOfMonthBR()
+      const [year, month] = firstDayCurrentMonth.split('-').map(Number)
+      const previousMonthEnd = new Date(year, month - 1, 0)
+      const y = previousMonthEnd.getFullYear()
+      const m = String(previousMonthEnd.getMonth() + 1).padStart(2, '0')
+      const d = String(previousMonthEnd.getDate()).padStart(2, '0')
+      return { startDate: '2020-01-01', endDate: `${y}-${m}-${d}` }
+    }
   }
 }
 
@@ -120,7 +121,7 @@ function HistoryPage() {
           <div className="min-w-0 space-y-0.5">
             <h1 className="text-3xl font-black tracking-[-0.04em]">Histórico</h1>
             <p className="text-white/45 text-[10px] font-bold tracking-[0.18em] uppercase">
-              Suas jornadas passadas.
+              Meses anteriores e jornadas já concluídas.
             </p>
           </div>
         </div>
@@ -163,7 +164,7 @@ function HistoryPage() {
               <p className="text-white/55/60 text-[11px]">
                 {filter === 'todos'
                   ? 'Novas jornadas aparecerão aqui após serem finalizadas no bot.'
-                  : 'Tente selecionar “Todos” para ver o histórico completo.'}
+                  : 'Não há registros anteriores ao mês atual.'}
               </p>
             </div>
           )}
