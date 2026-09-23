@@ -154,7 +154,7 @@ export const handleTelegramUpdate = async (body: any) => {
   const activeJourneyMenu = {
     keyboard: [
       [{ text: 'LANÇAR IFOOD' }, { text: 'LANÇAR UBER' }],
-      [{ text: 'ENTREGA +1' }, { text: 'ATUALIZAR KM' }],
+      [{ text: 'ATUALIZAR KM' }],
       [{ text: 'RESUMO' }, { text: 'ENCERRAR JORNADA' }],
       [{ text: 'CANCELAR JORNADA' }, { text: 'LIMPAR CHAT' }]
     ],
@@ -221,22 +221,6 @@ export const handleTelegramUpdate = async (body: any) => {
       return;
     }
     await send(`Quanto deseja acrescentar ao ${platform === 'IFOOD' ? 'iFood' : 'Uber'}?\nExemplo: 18,50`, cancelMenu);
-    return;
-  }
-
-  if (textInput === 'ENTREGA +1') {
-    if (!activeSession || !activeDay) {
-      await send('Inicie uma jornada antes de lançar entregas.', mainMenu);
-      return;
-    }
-    const nextDeliveries = (Number(activeDay.total_deliveries) || 0) + 1;
-    const { error } = await (supabaseAdmin.from('work_days').update({ total_deliveries: nextDeliveries }).eq('id', activeDay.id) as any);
-    if (error) {
-      console.error('Failed to add live delivery:', error);
-      await send('Não foi possível registrar a entrega. Tente novamente.', activeJourneyMenu);
-      return;
-    }
-    await send(`Entrega registrada. Total da jornada: <b>${nextDeliveries}</b>.`, activeJourneyMenu);
     return;
   }
 
@@ -653,6 +637,7 @@ export const handleTelegramUpdate = async (body: any) => {
       ifood_earned: fromCents(nextIfoodCents),
       uber_earned: fromCents(nextUberCents),
       total_earned: fromCents(nextIfoodCents + nextUberCents),
+      total_deliveries: (Number(activeDay.total_deliveries) || 0) + 1,
       notes: null
     };
     const { data, error } = await (supabaseAdmin.from('work_days').update(update).eq('id', activeDay.id).select().single() as any);
@@ -662,7 +647,7 @@ export const handleTelegramUpdate = async (body: any) => {
       return;
     }
     await send(
-      `<b>GANHO REGISTRADO</b>\n\niFood: ${formatCurrency(data.ifood_earned)}\nUber: ${formatCurrency(data.uber_earned)}\n<b>Total: ${formatCurrency(data.total_earned)}</b>`,
+      `<b>ENTREGA REGISTRADA</b>\n\niFood: ${formatCurrency(data.ifood_earned)}\nUber: ${formatCurrency(data.uber_earned)}\n<b>Total: ${formatCurrency(data.total_earned)}</b>\nEntregas: <b>${data.total_deliveries}</b>`,
       activeJourneyMenu
     );
     return;
