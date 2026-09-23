@@ -567,74 +567,22 @@ function JornadasPage() {
         </Card>
       )}
 
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-bold uppercase tracking-[0.16em] text-white/70">Últimas jornadas</h2>
-          <button onClick={loadJourneys} className="text-xs text-white/50 hover:text-blue-600 flex items-center gap-1.5">
-            <RefreshCw className="h-3.5 w-3.5" /> Atualizar
+      <div className="rounded-[28px] border border-white/10 bg-[#1A1C20] p-5">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-sm font-black uppercase tracking-[0.16em] text-white/75">Sincronização</h2>
+            <p className="mt-1 text-xs text-white/40">Os registros concluídos ficam disponíveis no Histórico.</p>
+          </div>
+          <button
+            onClick={loadJourneys}
+            disabled={loading}
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white/60 transition hover:text-white disabled:opacity-50"
+            aria-label="Atualizar dados"
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
         </div>
-
-        {loading ? (
-          <Card className="rounded-2xl border-slate-200"><CardContent className="p-8 text-center text-sm text-white/50">Carregando jornadas...</CardContent></Card>
-        ) : journeys.length === 0 ? (
-          <Card className="rounded-[28px] border-dashed border-white/15 bg-[#1A1C20] text-white shadow-none">
-            <CardContent className="py-12 text-center">
-              <Map className="h-8 w-8 mx-auto text-slate-300 mb-3" />
-              <div className="text-sm font-semibold text-white">Nenhuma jornada registrada</div>
-              <p className="text-xs text-white/40 mt-1">Sua primeira jornada criada pelo site aparecerá aqui.</p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid gap-3">
-            {journeys.map((journey) => (
-              <Card key={journey.id} className="rounded-[28px] border-white/10 bg-[#1A1C20] text-white shadow-[0_12px_30px_rgba(0,0,0,.2)]">
-                <CardContent className="p-4 md:p-5">
-                  <div className="flex items-center gap-3">
-                    <div className={`h-10 w-10 shrink-0 rounded-xl flex items-center justify-center ${journey.status === 'active' ? 'bg-emerald-50' : 'bg-white/10'}`}>
-                      <Map className={`h-4 w-4 ${journey.status === 'active' ? 'text-emerald-600' : 'text-white/50'}`} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold text-sm text-white">Jornada</span>
-                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${journey.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-white/10 text-white/50'}`}>
-                          {journey.status === 'active' ? 'Em andamento' : 'Finalizada'}
-                        </span>
-                      </div>
-                      <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-white/50">
-                        <span className="inline-flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5" />{formatDate(journey.work_days?.date)}</span>
-                        <span className="inline-flex items-center gap-1.5"><Clock3 className="h-3.5 w-3.5" />{formatTime(journey.start_time)} → {formatTime(journey.end_time)}</span>
-                      </div>
-                    </div>
-                    {journey.status === 'completed' && (
-                      <button
-                        type="button"
-                        aria-label="Excluir jornada"
-                        onClick={() => setConfirmDeleteId(confirmDeleteId === journey.id ? null : journey.id)}
-                        className="shrink-0 rounded-lg p-2 text-white/40 hover:bg-red-50 hover:text-red-600"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    )}
-                  </div>
-
-                  {confirmDeleteId === journey.id && (
-                    <div className="mt-4 rounded-xl border border-red-100 bg-red-50 p-3">
-                      <p className="text-xs text-red-800">Excluir esta jornada? Essa ação não pode ser desfeita.</p>
-                      <div className="mt-3 flex gap-2">
-                        <Button size="sm" variant="destructive" disabled={deletingId === journey.id} onClick={() => deleteJourney(journey)} className="rounded-lg gap-1.5">
-                          {deletingId === journey.id ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-                          Excluir
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={() => setConfirmDeleteId(null)} className="rounded-lg">Cancelar</Button>
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+        {loading && <p className="mt-4 text-xs font-semibold text-[#B8E64A]">Atualizando dados...</p>}
       </div>
     </div>
   )
