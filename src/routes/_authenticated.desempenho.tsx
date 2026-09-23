@@ -134,7 +134,7 @@ function PerformancePage() {
           ))}
         </div>
 
-        {/* Grid de Métricas 2x3 */}
+        {/* Grid de Métricas */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           <MetricCard icon={Wallet} label="Ganhos médios/dia" value={formatCurrency(fromCents(Math.round(toCents(metrics.totalEarned) / avgDays)))} />
           <MetricCard icon={TrendingUp} label="Ganhos por hora" value={metrics.avgPerHour > 0 ? `${formatCurrency(metrics.avgPerHour)}/h` : '—'} />
@@ -142,6 +142,8 @@ function PerformancePage() {
           <MetricCard icon={Zap} label="Entregas por hora" value={metrics.deliveriesPerHour > 0 ? metrics.deliveriesPerHour.toFixed(1) : '—'} />
           <MetricCard icon={Package} label="Média entregas/dia" value={filtered.workDays.length > 0 ? (metrics.totalDeliveries / avgDays).toFixed(1) : '—'} />
           <MetricCard icon={Clock} label="Tempo médio" value={metrics.totalMs > 0 ? formatDuration(metrics.totalMs / avgDays) : '—'} />
+          <MetricCard icon={Gauge} label="KM rodados" value={metrics.totalDistance > 0 ? `${metrics.totalDistance.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} km` : '—'} />
+          <MetricCard icon={Clock} label="Horas trabalhadas" value={metrics.totalMs > 0 ? formatDuration(metrics.totalMs) : '—'} />
         </div>
 
         {/* Comparativo de Plataformas */}
