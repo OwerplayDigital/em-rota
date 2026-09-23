@@ -126,14 +126,14 @@ function HistoryPage() {
           </div>
         </div>
 
-        {/* Filtros */}
-        <div className="flex gap-2 overflow-x-auto -mx-5 px-5 md:mx-0 md:px-0">
+        {/* Navegação entre duas visões distintas */}
+        <div className="grid grid-cols-2 gap-2">
           {FILTERS.map(f => (
             <button
               key={f.id}
               onClick={() => setFilter(f.id)}
               className={cn(
-                "shrink-0 rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-wide transition-all active:scale-95",
+                "rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-wide transition-all active:scale-95",
                 filter === f.id
                   ? "bg-[#B8E64A] border-[#B8E64A] text-black"
                   : "bg-white/5 border-white/10 text-white/55 hover:text-white"
@@ -144,15 +144,22 @@ function HistoryPage() {
           ))}
         </div>
 
-        <div className="rounded-[28px] border border-white/10 bg-[#6750D8] p-6 text-white">
-          <div className="text-[10px] font-black uppercase tracking-[0.2em] text-white/60">Resumo do período</div>
-          <div className="mt-2 text-4xl font-black tracking-[-0.04em]">{formatCurrency(periodSummary.totalEarned)}</div>
-          <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-            <div><div className="text-[10px] font-black uppercase tracking-wider text-white/55">iFood</div><div className="font-bold">{formatCurrency(periodSummary.ifoodEarned)}</div><div className="text-xs text-white/60">{periodSummary.ifoodDeliveries} entregas</div></div>
-            <div><div className="text-[10px] font-black uppercase tracking-wider text-white/55">Uber</div><div className="font-bold">{formatCurrency(periodSummary.uberEarned)}</div><div className="text-xs text-white/60">{periodSummary.uberDeliveries} entregas</div></div>
+        {filter === 'mes' ? (
+          <div className="rounded-[28px] border border-white/10 bg-[#6750D8] p-6 text-white">
+            <div className="text-[10px] font-black uppercase tracking-[0.2em] text-white/60">Este mês</div>
+            <div className="mt-2 text-4xl font-black tracking-[-0.04em]">{formatCurrency(periodSummary.totalEarned)}</div>
+            <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+              <div><div className="text-[10px] font-black uppercase tracking-wider text-white/55">iFood</div><div className="font-bold">{formatCurrency(periodSummary.ifoodEarned)}</div><div className="text-xs text-white/60">{periodSummary.ifoodDeliveries} entregas</div></div>
+              <div><div className="text-[10px] font-black uppercase tracking-wider text-white/55">Uber</div><div className="font-bold">{formatCurrency(periodSummary.uberEarned)}</div><div className="text-xs text-white/60">{periodSummary.uberDeliveries} entregas</div></div>
+            </div>
+            <div className="mt-4 border-t border-white/20 pt-3 text-xs font-semibold text-white/65">Total: {periodSummary.totalDeliveries} entregas</div>
           </div>
-          <div className="mt-4 border-t border-white/20 pt-3 text-xs font-semibold text-white/65">Total: {periodSummary.totalDeliveries} entregas</div>
-        </div>
+        ) : (
+          <div className="rounded-[24px] border border-white/10 bg-[#1A1C20] px-5 py-4">
+            <div className="text-[10px] font-black uppercase tracking-[0.18em] text-white/40">Arquivo</div>
+            <div className="mt-1 text-sm font-semibold text-white/70">Jornadas anteriores ao mês atual</div>
+          </div>
+        )}
 
         {/* Feed de Cards */}
         <div className="space-y-3">
