@@ -13,7 +13,8 @@ import {
   formatTimeBR,
   formatDuration,
   formatCurrency,
-  calculateMetrics
+  calculateMetrics,
+  getLocalDateString
 } from '@/lib/dashboard-utils'
 import { toCents, fromCents } from '@/lib/money'
 
@@ -29,25 +30,28 @@ const FILTERS = [
 
 type FilterId = (typeof FILTERS)[number]['id']
 
-function pad2(n: number) {
-  return String(n).padStart(2, '0')
+function localTodayParts() {
+  const today = getLocalDateString()
+  const [year, month, day] = today.split('-').map(Number)
+  return { today, date: new Date(year, month - 1, day) }
 }
 
 function todayStrBR() {
-  const now = new Date()
-  return `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`
+  return getLocalDateString()
 }
 
 function startOfWeekBR() {
-  const now = new Date()
-  const day = (now.getDay() + 6) % 7 // segunda = 0
+  const { date: now } = localTodayParts()
+  const day = (now.getDay() + 6) % 7
   const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - day)
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${dd}`
 }
 
 function startOfMonthBR() {
-  const now = new Date()
-  return `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-01`
+  return `${getLocalDateString().slice(0, 7)}-01`
 }
 
 function dateRangeForFilter(filter: FilterId) {
