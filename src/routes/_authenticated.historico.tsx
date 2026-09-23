@@ -73,6 +73,7 @@ function dateRangeForFilter(filter: FilterId) {
 function HistoryPage() {
   const search = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
   const initialFilter = (search?.get('periodo') as FilterId) || 'todos'
+  const targetDate = search?.get('dia') || null
   const [selectedDay, setSelectedDay] = useState<any>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [filter, setFilter] = useState<FilterId>(FILTERS.some(f => f.id === initialFilter) ? initialFilter : 'todos')
@@ -159,8 +160,8 @@ function HistoryPage() {
             <HistoryCard
               key={item.id}
               item={item}
-              expanded={expandedId === item.id}
-              onToggle={() => setExpandedId(expandedId === item.id ? null : item.id)}
+              expanded={expandedId === item.id || (expandedId === null && targetDate === item.date)}
+              onToggle={() => setExpandedId((expandedId === item.id || (expandedId === null && targetDate === item.date)) ? '__closed__' : item.id)}
             />
           ))}
 
