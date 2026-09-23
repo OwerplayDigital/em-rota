@@ -378,7 +378,7 @@ function JornadasPage() {
       <div className="mt-2 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-3xl font-black tracking-[-0.04em] text-white">Jornadas</h1>
-          <p className="mt-1 text-sm text-white/45">Crie e acompanhe suas jornadas diretamente pelo Em Rota.</p>
+
         </div>
         <Button
           onClick={() => setShowForm((value) => !value)}
@@ -567,23 +567,7 @@ function JornadasPage() {
         </Card>
       )}
 
-      <div className="rounded-[28px] border border-white/10 bg-[#1A1C20] p-5">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-sm font-black uppercase tracking-[0.16em] text-white/75">Sincronização</h2>
-            <p className="mt-1 text-xs text-white/40">Os registros concluídos ficam disponíveis no Histórico.</p>
-          </div>
-          <button
-            onClick={loadJourneys}
-            disabled={loading}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white/60 transition hover:text-white disabled:opacity-50"
-            aria-label="Atualizar dados"
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          </button>
-        </div>
-        {loading && <p className="mt-4 text-xs font-semibold text-[#B8E64A]">Atualizando dados...</p>}
-      </div>
+
     </div>
   )
 }
