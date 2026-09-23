@@ -39,6 +39,7 @@ function periodStart(period: string): string {
 
 function PerformancePage() {
   const [period, setPeriod] = useState<string>('30d')
+  const [recordModal, setRecordModal] = useState<{ title: string; value: string; date: string } | null>(null)
 
   const { data } = useSuspenseQuery({
     queryKey: ['dashboard', 'performance-all'],
@@ -115,6 +116,15 @@ function PerformancePage() {
       bestPerHourDate,
     }
   }, [data])
+
+  const recordDetails = useMemo(() => {
+    if (!recordModal?.date) return null
+    const wd = data.workDays.find(day => day.date === recordModal.date)
+    if (!wd) return null
+    const sessions = data.sessions.filter(s => s.work_day_id === wd.id)
+    const dayMetrics = calculateMetrics([wd], sessions)
+    return { wd, dayMetrics }
+  }, [data, recordModal])
 
   return (
     <div className="min-h-screen bg-[#111216] text-white">
@@ -204,22 +214,56 @@ function PerformancePage() {
               label="Maior ganho em um dia"
               value={records.maxEarned > 0 ? formatCurrency(records.maxEarned) : '—'}
               date={records.maxEarnedDate}
+              onOpen={(title, value, date) => setRecordModal({ title, value, date })}
             />
             <RecordRow
               emoji="⚡"
               label="Melhor média R$/hora"
               value={records.bestPerHour > 0 ? `${formatCurrency(records.bestPerHour)}/h` : '—'}
               date={records.bestPerHourDate}
+              onOpen={(title, value, date) => setRecordModal({ title, value, date })}
             />
             <RecordRow
               emoji="📦"
               label="Mais entregas em uma jornada"
               value={records.maxDeliveries > 0 ? records.maxDeliveries.toString() : '—'}
               date={records.maxDeliveriesDate}
+              onOpen={(title, value, date) => setRecordModal({ title, value, date })}
             />
           </div>
         </div>
       </motion.div>
+
+      {recordModal && recordDetails && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 sm:items-center" onClick={() => setRecordModal(null)}>
+          <div className="w-full max-w-md rounded-[28px] border border-white/10 bg-[#1A1C20] p-5 text-white shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="text-[10px] font-black uppercase tracking-[0.18em] text-white/45">{recordModal.title}</div>
+                <div className="mt-1 text-3xl font-black text-[#B8E64A]">{recordModal.value}</div>
+                <div className="mt-1 text-sm font-semibold text-white/55">{recordModal.date.split('-').reverse().join('/')}</div>
+              </div>
+              <button type="button" onClick={() => setRecordModal(null)} className="rounded-full bg-white/10 px-3 py-2 text-sm font-bold text-white/70">Fechar</button>
+            </div>
+            <div className="mt-5 grid grid-cols-2 gap-2">
+              <RecordDetail label="iFood" value={formatCurrency(recordDetails.dayMetrics.totalIfood)} />
+              <RecordDetail label="Uber" value={formatCurrency(recordDetails.dayMetrics.totalUber)} />
+              <RecordDetail label="Entregas" value={String(recordDetails.dayMetrics.totalDeliveries)} />
+              <RecordDetail label="Distância" value={`${recordDetails.dayMetrics.totalDistance.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} km`} />
+              <RecordDetail label="Tempo" value={recordDetails.dayMetrics.totalMs > 0 ? formatDuration(recordDetails.dayMetrics.totalMs) : '—'} />
+              <RecordDetail label="R$/hora" value={recordDetails.dayMetrics.avgPerHour > 0 ? `${formatCurrency(recordDetails.dayMetrics.avgPerHour)}/h` : '—'} />
+            </div>
+            {(recordDetails.wd.odometer_start != null || recordDetails.wd.odometer_end != null) && (
+              <div className="mt-3 rounded-[18px] border border-white/10 bg-white/5 px-4 py-3">
+                <div className="text-[9px] font-bold uppercase tracking-widest text-white/40">Odômetro</div>
+                <div className="mt-1 text-sm font-bold text-white/80">
+                  {recordDetails.wd.odometer_start ?? '—'} → {recordDetails.wd.odometer_end ?? '—'} km
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -264,16 +308,18 @@ function PlatformCompareRow({ label, dotColor, rowClassName, pct, total, avgPerD
   )
 }
 
-function RecordRow({ emoji, label, value, date }: { emoji: string; label: string; value: string; date: string }) {
-  const openRecordDay = () => {
-    if (!date) return
-    const currentMonth = getLocalDateString().slice(0, 7)
-    const periodo = date.slice(0, 7) === currentMonth ? 'mes' : 'todos'
-    window.location.href = `/historico?periodo=${periodo}&dia=${date}`
-  }
-
+function RecordDetail({ label, value }: { label: string; value: string }) {
   return (
-    <button type="button" onClick={openRecordDay} disabled={!date} className="w-full flex items-center justify-between rounded-[18px] border border-white/15 bg-black/10 px-4 py-3 text-left transition active:scale-[0.99] disabled:cursor-default">
+    <div className="rounded-[16px] border border-white/10 bg-white/5 px-3 py-3">
+      <div className="text-[9px] font-bold uppercase tracking-widest text-white/40">{label}</div>
+      <div className="mt-1 text-sm font-black text-white">{value}</div>
+    </div>
+  )
+}
+
+function RecordRow({ emoji, label, value, date, onOpen }: { emoji: string; label: string; value: string; date: string; onOpen: (title: string, value: string, date: string) => void }) {
+  return (
+    <button type="button" onClick={() => date && onOpen(label, value, date)} disabled={!date} className="w-full flex items-center justify-between rounded-[18px] border border-white/15 bg-black/10 px-4 py-3 text-left transition active:scale-[0.99] disabled:cursor-default">
       <div className="flex items-center gap-3 min-w-0">
         <span className="text-base leading-none">{emoji}</span>
         <span className="text-xs font-medium text-white/65">{label}</span>
