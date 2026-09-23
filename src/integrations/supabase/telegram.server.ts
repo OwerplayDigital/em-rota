@@ -735,10 +735,7 @@ export const handleTelegramUpdate = async (body: any) => {
     if (odoToUse !== null) {
       await (supabaseAdmin.from('work_days').update({ odometer_start: odoToUse, notes: null }).eq('id', activeDay.id) as any);
       await (supabaseAdmin.from('sessions').insert({ work_day_id: activeDay.id, status: 'active' as any }) as any);
-      await send(`Jornada iniciada com odômetro <b>${formatNumberBR(odoToUse)} km</b>!`, {
-        keyboard: [[{ text: 'ENCERRAR JORNADA' }, { text: 'CANCELAR JORNADA' }], [{ text: 'RESUMO' }], [{ text: 'LIMPAR CHAT' }]],
-        resize_keyboard: true
-      });
+      await send(`Jornada iniciada com odômetro <b>${formatNumberBR(odoToUse)} km</b>!`, activeJourneyMenu);
       return;
     }
   }
