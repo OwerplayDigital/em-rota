@@ -374,16 +374,16 @@ function JornadasPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-8 space-y-6">
-      <div className="mt-2 pl-14 md:mt-0 md:pl-0 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div className="min-h-screen bg-[#111216] p-5 pb-16 text-white md:p-8 space-y-6">
+      <div className="mt-2 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900">Jornadas</h1>
-          <p className="mt-1 text-sm text-slate-500">Crie e acompanhe suas jornadas diretamente pelo Em Rota.</p>
+          <h1 className="text-3xl font-black tracking-[-0.04em] text-white">Jornadas</h1>
+          <p className="mt-1 text-sm text-white/45">Crie e acompanhe suas jornadas diretamente pelo Em Rota.</p>
         </div>
         <Button
           onClick={() => setShowForm((value) => !value)}
           disabled={!!activeJourney || todayDay?.status === 'completed'}
-          className="rounded-xl gap-2 self-start"
+          className="rounded-[18px] gap-2 self-start bg-[#B8E64A] text-black hover:bg-[#B8E64A]/90"
         >
           <Plus className="h-4 w-4" />
           Nova jornada
@@ -391,33 +391,33 @@ function JornadasPage() {
       </div>
 
       {showForm && (
-        <Card className="rounded-2xl border-slate-200 shadow-sm">
+        <Card className="rounded-[28px] border-white/10 bg-[#1A1C20] text-white shadow-[0_12px_30px_rgba(0,0,0,.2)]">
           <CardContent className="p-5 md:p-6">
             <div className="flex items-start gap-3 mb-5">
               <div className="h-10 w-10 rounded-xl bg-blue-50 flex items-center justify-center">
                 <Play className="h-4 w-4 text-blue-600" />
               </div>
               <div>
-                <h2 className="font-semibold text-slate-900">Iniciar nova jornada</h2>
-                <p className="text-xs text-slate-500 mt-0.5">O odômetro é registrado uma vez por dia, como no bot.</p>
+                <h2 className="font-semibold text-white">Iniciar nova jornada</h2>
+                <p className="text-xs text-white/50 mt-0.5">O odômetro é registrado uma vez por dia, como no bot.</p>
               </div>
             </div>
 
             <div className="max-w-sm space-y-3">
               {todayOdometerStart === null ? (
                 <>
-                  <label htmlFor="odometer" className="text-xs font-semibold text-slate-600">Odômetro inicial do dia (km)</label>
+                  <label htmlFor="odometer" className="text-xs font-semibold text-white/60">Odômetro inicial do dia (km)</label>
                   <input
                     id="odometer"
                     inputMode="decimal"
                     value={odometer}
                     onChange={(event) => setOdometer(event.target.value)}
                     placeholder="Ex.: 12540"
-                    className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10"
+                    className="h-11 w-full rounded-xl border border-white/10 bg-white/5 px-4 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10"
                   />
                 </>
               ) : (
-                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/60">
                   Odômetro inicial do dia já registrado: <strong>{Number(todayOdometerStart).toLocaleString('pt-BR')} km</strong>.
                 </div>
               )}
@@ -435,7 +435,7 @@ function JornadasPage() {
       )}
 
       {activeJourney && (
-        <Card className="rounded-2xl border-emerald-200 bg-emerald-50/50 shadow-sm">
+        <Card className="rounded-[28px] border-[#B8E64A]/30 bg-[#B8E64A] text-black shadow-[0_12px_30px_rgba(0,0,0,.2)]">
           <CardContent className="p-4 sm:p-5">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
               <div className="flex min-w-0 items-center gap-3 sm:flex-1">
@@ -479,12 +479,12 @@ function JornadasPage() {
               <>
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center">
+                    <div className="h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center">
                       <Flag className="h-4 w-4 text-slate-600" />
                     </div>
                     <div>
-                      <h2 className="font-semibold text-slate-900">Fechar dia</h2>
-                      <p className="text-xs text-slate-500 mt-0.5">Registre os dados finais somente quando terminar o trabalho de hoje.</p>
+                      <h2 className="font-semibold text-white">Fechar dia</h2>
+                      <p className="text-xs text-white/50 mt-0.5">Registre os dados finais somente quando terminar o trabalho de hoje.</p>
                     </div>
                   </div>
                   <Button
@@ -505,47 +505,47 @@ function JornadasPage() {
                 {showCloseForm && !activeJourney && (
                   <div className="mt-5 border-t border-slate-100 pt-5">
                     <div className="grid gap-4 sm:grid-cols-2 max-w-2xl">
-                      <label className="space-y-1.5 text-xs font-semibold text-slate-600">
+                      <label className="space-y-1.5 text-xs font-semibold text-white/60">
                         Odômetro final (km)
                         <input
                           inputMode="decimal"
                           value={closeOdometer}
                           onChange={(event) => setCloseOdometer(event.target.value)}
                           placeholder={`Mínimo: ${Number(todayDay.odometer_start ?? 0).toLocaleString('pt-BR')}`}
-                          className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-normal text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10"
+                          className="h-11 w-full rounded-xl border border-white/10 bg-white/5 px-4 text-sm font-normal text-white outline-none focus:border-[#B8E64A] focus:ring-2 focus:ring-[#B8E64A]/10"
                         />
                       </label>
 
-                      <label className="space-y-1.5 text-xs font-semibold text-slate-600">
+                      <label className="space-y-1.5 text-xs font-semibold text-white/60">
                         Ganhos Uber (R$)
                         <input
                           inputMode="decimal"
                           value={uberEarned}
                           onChange={(event) => setUberEarned(event.target.value)}
                           placeholder="Ex.: 85,50 ou 0"
-                          className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-normal text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10"
+                          className="h-11 w-full rounded-xl border border-white/10 bg-white/5 px-4 text-sm font-normal text-white outline-none focus:border-[#B8E64A] focus:ring-2 focus:ring-[#B8E64A]/10"
                         />
                       </label>
 
-                      <label className="space-y-1.5 text-xs font-semibold text-slate-600">
+                      <label className="space-y-1.5 text-xs font-semibold text-white/60">
                         Ganhos iFood (R$)
                         <input
                           inputMode="decimal"
                           value={ifoodEarned}
                           onChange={(event) => setIfoodEarned(event.target.value)}
                           placeholder="Ex.: 120,00 ou 0"
-                          className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-normal text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10"
+                          className="h-11 w-full rounded-xl border border-white/10 bg-white/5 px-4 text-sm font-normal text-white outline-none focus:border-[#B8E64A] focus:ring-2 focus:ring-[#B8E64A]/10"
                         />
                       </label>
 
-                      <label className="space-y-1.5 text-xs font-semibold text-slate-600">
+                      <label className="space-y-1.5 text-xs font-semibold text-white/60">
                         Entregas
                         <input
                           inputMode="numeric"
                           value={deliveries}
                           onChange={(event) => setDeliveries(event.target.value)}
                           placeholder="Ex.: 12"
-                          className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-normal text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10"
+                          className="h-11 w-full rounded-xl border border-white/10 bg-white/5 px-4 text-sm font-normal text-white outline-none focus:border-[#B8E64A] focus:ring-2 focus:ring-[#B8E64A]/10"
                         />
                       </label>
                     </div>
@@ -569,39 +569,39 @@ function JornadasPage() {
 
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-slate-800">Últimas jornadas</h2>
-          <button onClick={loadJourneys} className="text-xs text-slate-500 hover:text-blue-600 flex items-center gap-1.5">
+          <h2 className="text-sm font-bold uppercase tracking-[0.16em] text-white/70">Últimas jornadas</h2>
+          <button onClick={loadJourneys} className="text-xs text-white/50 hover:text-blue-600 flex items-center gap-1.5">
             <RefreshCw className="h-3.5 w-3.5" /> Atualizar
           </button>
         </div>
 
         {loading ? (
-          <Card className="rounded-2xl border-slate-200"><CardContent className="p-8 text-center text-sm text-slate-500">Carregando jornadas...</CardContent></Card>
+          <Card className="rounded-2xl border-slate-200"><CardContent className="p-8 text-center text-sm text-white/50">Carregando jornadas...</CardContent></Card>
         ) : journeys.length === 0 ? (
-          <Card className="rounded-2xl border-dashed border-slate-300 bg-white shadow-none">
+          <Card className="rounded-[28px] border-dashed border-white/15 bg-[#1A1C20] text-white shadow-none">
             <CardContent className="py-12 text-center">
               <Map className="h-8 w-8 mx-auto text-slate-300 mb-3" />
-              <div className="text-sm font-semibold text-slate-700">Nenhuma jornada registrada</div>
-              <p className="text-xs text-slate-400 mt-1">Sua primeira jornada criada pelo site aparecerá aqui.</p>
+              <div className="text-sm font-semibold text-white">Nenhuma jornada registrada</div>
+              <p className="text-xs text-white/40 mt-1">Sua primeira jornada criada pelo site aparecerá aqui.</p>
             </CardContent>
           </Card>
         ) : (
           <div className="grid gap-3">
             {journeys.map((journey) => (
-              <Card key={journey.id} className="rounded-2xl border-slate-200 shadow-sm">
+              <Card key={journey.id} className="rounded-[28px] border-white/10 bg-[#1A1C20] text-white shadow-[0_12px_30px_rgba(0,0,0,.2)]">
                 <CardContent className="p-4 md:p-5">
                   <div className="flex items-center gap-3">
-                    <div className={`h-10 w-10 shrink-0 rounded-xl flex items-center justify-center ${journey.status === 'active' ? 'bg-emerald-50' : 'bg-slate-100'}`}>
-                      <Map className={`h-4 w-4 ${journey.status === 'active' ? 'text-emerald-600' : 'text-slate-500'}`} />
+                    <div className={`h-10 w-10 shrink-0 rounded-xl flex items-center justify-center ${journey.status === 'active' ? 'bg-emerald-50' : 'bg-white/10'}`}>
+                      <Map className={`h-4 w-4 ${journey.status === 'active' ? 'text-emerald-600' : 'text-white/50'}`} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold text-sm text-slate-900">Jornada</span>
-                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${journey.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                        <span className="font-semibold text-sm text-white">Jornada</span>
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${journey.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-white/10 text-white/50'}`}>
                           {journey.status === 'active' ? 'Em andamento' : 'Finalizada'}
                         </span>
                       </div>
-                      <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+                      <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-white/50">
                         <span className="inline-flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5" />{formatDate(journey.work_days?.date)}</span>
                         <span className="inline-flex items-center gap-1.5"><Clock3 className="h-3.5 w-3.5" />{formatTime(journey.start_time)} → {formatTime(journey.end_time)}</span>
                       </div>
@@ -611,7 +611,7 @@ function JornadasPage() {
                         type="button"
                         aria-label="Excluir jornada"
                         onClick={() => setConfirmDeleteId(confirmDeleteId === journey.id ? null : journey.id)}
-                        className="shrink-0 rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600"
+                        className="shrink-0 rounded-lg p-2 text-white/40 hover:bg-red-50 hover:text-red-600"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
