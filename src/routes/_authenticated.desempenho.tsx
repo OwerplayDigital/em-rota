@@ -158,18 +158,6 @@ function PerformancePage() {
             </span>
           </div>
 
-          {/* Barra proporcional */}
-          <div className="h-2.5 w-full rounded-full bg-white/10 overflow-hidden flex">
-            <div
-              className="h-full bg-white/55 transition-all duration-500"
-              style={{ width: `${platform.ifoodPct}%` }}
-            />
-            <div
-              className="h-full bg-white/20 transition-all duration-500"
-              style={{ width: `${platform.uberPct}%` }}
-            />
-          </div>
-
           <div className="space-y-2">
             <PlatformCompareRow
               label="iFood"
