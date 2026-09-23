@@ -54,7 +54,7 @@ function DashboardPage() {
           <CardLink cls="top-[44%] z-[3]" color={C.purple} to="/historico" search={{ periodo: "mes" }} label="ESTE MÊS"
             value={formatCurrency(month.totalEarned)}
             detail={`iFood ${formatCurrency(month.totalIfood)} · Uber ${formatCurrency(month.totalUber)} · ${month.totalDeliveries} entregas`} />
-          <CardLink cls="top-[66%] z-[4]" color={C.teal} to="/desempenho" label="DESEMPENHO"
+          <CardLink cls="top-[66%] z-[4]" color={C.teal} to="/desempenho" label="MÉTRICAS DO MÊS"
             value={month.avgPerKm > 0 ? `${formatCurrency(month.avgPerKm)}/km` : 'Métricas'}
             detail={`${month.totalDistance.toLocaleString('pt-BR',{maximumFractionDigits:1})} km · ${month.totalDeliveries} entregas · ${formatDuration(month.totalMs)}`} />
         </>}
