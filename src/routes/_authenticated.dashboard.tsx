@@ -50,13 +50,13 @@ function DashboardPage() {
             value={last ? formatCurrency(Number(last.total_earned)||0) : 'R$ 0,00'}
             detail={last ? `${last.total_deliveries||0} entregas · ${lastKm.toLocaleString('pt-BR',{maximumFractionDigits:1})} km` : 'Nenhuma jornada concluída'} />
           <CardLink cls="top-[22%] z-[2]" color={C.coral} to="/historico" label="HISTÓRICO"
-            value="Histórico" detail="Meses anteriores · ganhos, entregas e desempenho" />
+            value="Meses anteriores" detail="Consulte suas jornadas concluídas" />
           <CardLink cls="top-[44%] z-[3]" color={C.purple} to="/historico" search={{ periodo: "mes" }} label="ESTE MÊS"
             value={formatCurrency(month.totalEarned)}
             detail={`iFood ${formatCurrency(month.totalIfood)} · Uber ${formatCurrency(month.totalUber)} · ${month.totalDeliveries} entregas`} />
           <CardLink cls="top-[66%] z-[4]" color={C.teal} to="/desempenho" label="DESEMPENHO"
             value={month.avgPerKm > 0 ? `${formatCurrency(month.avgPerKm)}/km` : 'Métricas'}
-            detail={`${month.totalDistance.toLocaleString('pt-BR',{maximumFractionDigits:1})} km no mês · ganhos, tempo e eficiência`} />
+            detail={`${month.totalDistance.toLocaleString('pt-BR',{maximumFractionDigits:1})} km · ${month.totalDeliveries} entregas · ${formatDuration(month.totalMs)}`} />
         </>}
       </section>
     </div>
