@@ -47,15 +47,15 @@ function DashboardPage() {
             detail={`odômetro inicial ${Number(day.odometer_start||0).toLocaleString('pt-BR')} km`}
             split={<><span>Distância da jornada</span><span>{day.odometer_end != null ? `Atual ${Number(day.odometer_end).toLocaleString('pt-BR')} km` : 'Aguardando atualização'}</span></>} />
         </> : <>
-          <CardLink cls="top-0 z-[1]" color={C.green} to="/historico" dark label="ÚLTIMA JORNADA"
+          <CardLink cls="top-0 z-[1]" color={C.green} to="/historico" search={{ dia: last?.date }} dark label="ÚLTIMA JORNADA"
             value={last ? formatCurrency(Number(last.total_earned)||0) : 'R$ 0,00'}
             detail={last ? `${last.total_deliveries||0} entregas · ${lastKm.toLocaleString('pt-BR',{maximumFractionDigits:1})} km` : 'Nenhuma jornada concluída'} />
           <CardLink cls="top-[22%] z-[2]" color={C.coral} to="/historico" label="HISTÓRICO"
             value="Ver jornadas" detail="Ganhos, entregas e desempenho por período" />
-          <CardLink cls="top-[44%] z-[3]" color={C.purple} to="/historico" label="ESTE MÊS"
+          <CardLink cls="top-[44%] z-[3]" color={C.purple} to="/historico" search={{ periodo: "mes" }} label="ESTE MÊS"
             value={formatCurrency(month.totalEarned)}
             detail={`iFood ${formatCurrency(month.totalIfood)} · Uber ${formatCurrency(month.totalUber)} · ${month.totalDeliveries} entregas`} />
-          <CardLink cls="top-[66%] z-[4]" color={C.teal} to="/historico" label="KM RODADOS NO MÊS"
+          <CardLink cls="top-[66%] z-[4]" color={C.teal} to="/historico" search={{ periodo: "mes", foco: "km" }} label="KM RODADOS NO MÊS"
             value={`${month.totalDistance.toLocaleString('pt-BR',{maximumFractionDigits:1})} km`}
             detail="Abrir detalhes do período" />
         </>}
@@ -78,9 +78,9 @@ function Card({cls,color,label,value,detail,split,dark=false}:{cls:string;color:
   </article>
 }
 
-function CardLink({cls,color,to,label,value,detail,dark=false}:{cls:string;color:string;to:'/historico';label:string;value:string;detail:string;dark?:boolean}) {
+function CardLink({cls,color,to,label,value,detail,dark=false,search}:{cls:string;color:string;to:'/historico';label:string;value:string;detail:string;dark?:boolean;search?:any}) {
   const fg=dark?'#14160e':'#fff'
-  return <Link to={to} className={`absolute left-0 right-0 block h-[31%] min-h-[150px] max-h-[190px] overflow-hidden rounded-[28px] border border-white/10 px-[22px] py-[21px] shadow-[0_-11px_27px_#0005] max-[700px]:min-h-[138px] max-[700px]:px-5 max-[700px]:py-[18px] ${cls}`} style={{background:color,color:fg}}>
+  return <Link to={to} search={search} className={`absolute left-0 right-0 block h-[31%] min-h-[150px] max-h-[190px] overflow-hidden rounded-[28px] border border-white/10 px-[22px] py-[21px] shadow-[0_-11px_27px_#0005] max-[700px]:min-h-[138px] max-[700px]:px-5 max-[700px]:py-[18px] ${cls}`} style={{background:color,color:fg}}>
     <small className="text-[9px] font-black tracking-[.14em]">{label}</small>
     <strong className="mt-[10px] block text-[clamp(36px,11vw,44px)] font-black leading-none tracking-[-.045em]">{value}</strong>
     <p className="mt-[6px] text-[11px] font-semibold opacity-[.67]">{detail}</p>
