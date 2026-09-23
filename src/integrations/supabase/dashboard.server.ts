@@ -1,5 +1,6 @@
 import { supabaseAdmin } from './client.server';
 import { toCents, fromCents } from '@/lib/money';
+import { getLocalDateString } from '@/lib/dashboard-utils';
 
 export const getDashboardData = async (startDate: string, endDate: string) => {
   if (!startDate || !endDate) throw new Error("startDate and endDate are required");
@@ -44,7 +45,7 @@ export const getDashboardData = async (startDate: string, endDate: string) => {
 };
 
 export const updateDailyGoal = async (goal: number) => {
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = getLocalDateString();
   // Garante precisão monetária de centavos: NUMERIC(10,2)
   const goalRounded = fromCents(toCents(goal));
   
