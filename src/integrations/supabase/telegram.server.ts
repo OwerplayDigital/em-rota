@@ -130,7 +130,7 @@ export const handleTelegramUpdate = async (body: any) => {
       `${earnedCents < goalCents ? `Faltam: ${formatCurrency(fromCents(goalCents - earnedCents))}` : 'Meta Atingida'}\n` : '';
 
     return `<b>RESUMO DE ${formatDateBR(day.date)}</b>\n\n` +
-      `<b>Ganhos:</b>\n${formatCurrency(day.total_earned)} (Uber: ${formatCurrency(day.uber_earned)} | iFood: ${formatCurrency(day.ifood_earned)})\n\n` +
+      `<b>Ganhos:</b>\n${formatCurrency(day.total_earned)} (iFood: ${formatCurrency(day.ifood_earned)} | Uber: ${formatCurrency(day.uber_earned)})\n\n` +
       `<b>Entregas:</b>\n${day.total_deliveries ?? 'Ainda não informado'}\n\n` +
       `<b>Distância:</b>\n${distance !== null ? `${formatNumberBR(distance)} km` : 'Ainda não informado'}\n\n` +
       `<b>Tempo na rua:</b>\n${formatDuration(totalMs)}\n\n` +
@@ -151,6 +151,16 @@ export const handleTelegramUpdate = async (body: any) => {
     resize_keyboard: true
   };
 
+  const activeJourneyMenu = {
+    keyboard: [
+      [{ text: 'LANÇAR IFOOD' }, { text: 'LANÇAR UBER' }],
+      [{ text: 'ENTREGA +1' }, { text: 'ATUALIZAR KM' }],
+      [{ text: 'RESUMO' }, { text: 'ENCERRAR JORNADA' }],
+      [{ text: 'CANCELAR JORNADA' }, { text: 'LIMPAR CHAT' }]
+    ],
+    resize_keyboard: true
+  };
+
   const cancelMenu = {
     keyboard: [[{ text: 'CANCELAR' }]],
     resize_keyboard: true
@@ -165,7 +175,7 @@ export const handleTelegramUpdate = async (body: any) => {
     keyboard: [
       [{ text: 'HORÁRIO DE INÍCIO' }, { text: 'HORÁRIO DE ENCERRAMENTO' }],
       [{ text: 'ODÔMETRO INICIAL' }, { text: 'ODÔMETRO FINAL' }],
-      [{ text: 'GANHOS UBER' }, { text: 'GANHOS IFOOD' }],
+      [{ text: 'GANHOS IFOOD' }, { text: 'GANHOS UBER' }],
       [{ text: 'ENTREGAS' }, { text: 'ADICIONAR JORNADA' }],
       [{ text: 'EXCLUIR JORNADA' }, { text: 'REABRIR DIA' }],
       [{ text: 'VOLTAR' }]
@@ -198,12 +208,59 @@ export const handleTelegramUpdate = async (body: any) => {
     return;
   }
 
+  if (textInput === 'LANÇAR IFOOD' || textInput === 'LANÇAR UBER') {
+    if (!activeSession || !activeDay) {
+      await send('Inicie uma jornada antes de lançar ganhos.', mainMenu);
+      return;
+    }
+    const platform = textInput === 'LANÇAR IFOOD' ? 'IFOOD' : 'UBER';
+    const { error } = await (supabaseAdmin.from('work_days').update({ notes: `LIVE:EARNED:${platform}` }).eq('id', activeDay.id) as any);
+    if (error) {
+      console.error('Failed to prepare live earning:', error);
+      await send('Não foi possível preparar o lançamento. Tente novamente.', activeJourneyMenu);
+      return;
+    }
+    await send(`Quanto deseja acrescentar ao ${platform === 'IFOOD' ? 'iFood' : 'Uber'}?\nExemplo: 18,50`, cancelMenu);
+    return;
+  }
+
+  if (textInput === 'ENTREGA +1') {
+    if (!activeSession || !activeDay) {
+      await send('Inicie uma jornada antes de lançar entregas.', mainMenu);
+      return;
+    }
+    const nextDeliveries = (Number(activeDay.total_deliveries) || 0) + 1;
+    const { error } = await (supabaseAdmin.from('work_days').update({ total_deliveries: nextDeliveries }).eq('id', activeDay.id) as any);
+    if (error) {
+      console.error('Failed to add live delivery:', error);
+      await send('Não foi possível registrar a entrega. Tente novamente.', activeJourneyMenu);
+      return;
+    }
+    await send(`Entrega registrada. Total da jornada: <b>${nextDeliveries}</b>.`, activeJourneyMenu);
+    return;
+  }
+
+  if (textInput === 'ATUALIZAR KM') {
+    if (!activeSession || !activeDay) {
+      await send('Inicie uma jornada antes de atualizar o odômetro.', mainMenu);
+      return;
+    }
+    const { error } = await (supabaseAdmin.from('work_days').update({ notes: 'LIVE:ODO' }).eq('id', activeDay.id) as any);
+    if (error) {
+      console.error('Failed to prepare live odometer:', error);
+      await send('Não foi possível preparar a atualização. Tente novamente.', activeJourneyMenu);
+      return;
+    }
+    await send(`Qual é o odômetro atual?\nInicial: <b>${formatNumberBR(activeDay.odometer_start)} km</b>`, cancelMenu);
+    return;
+  }
+
   if (textInput === 'RESUMO') {
     if (!activeDay) {
       await send('Nenhum dado para hoje.', mainMenu);
     } else {
       const summary = await getSummary(activeDay);
-      await send(summary, activeDay.status === 'completed' ? { keyboard: [[{ text: 'CORRIGIR DIA' }, { text: 'EXCLUIR JORNADA' }], [{ text: 'LIMPAR CHAT' }], [{ text: 'MENU' }]], resize_keyboard: true } : mainMenu);
+      await send(summary, activeDay.status === 'completed' ? { keyboard: [[{ text: 'CORRIGIR DIA' }, { text: 'EXCLUIR JORNADA' }], [{ text: 'LIMPAR CHAT' }], [{ text: 'MENU' }]], resize_keyboard: true } : (activeSession ? activeJourneyMenu : mainMenu));
     }
     return;
   }
@@ -240,8 +297,7 @@ export const handleTelegramUpdate = async (body: any) => {
     if (activeSession) {
       const startTime = formatDateTimeBR(activeSession.start_time);
       await send(`Você já tem uma jornada em andamento.\n\nInício: ${startTime}\nOdômetro: ${formatNumberBR(activeDay?.odometer_start) ?? 'Não informado'}`, {
-        keyboard: [[{ text: 'ENCERRAR JORNADA' }, { text: 'RESUMO' }], [{ text: 'MENU' }]],
-        resize_keyboard: true
+        ...activeJourneyMenu
       });
       return;
     }
@@ -268,8 +324,7 @@ export const handleTelegramUpdate = async (body: any) => {
 
     await (supabaseAdmin.from('sessions').insert({ work_day_id: activeDay.id, status: 'active' as any }) as any);
     await send('Jornada iniciada!', {
-      keyboard: [[{ text: 'ENCERRAR JORNADA' }, { text: 'CANCELAR JORNADA' }], [{ text: 'RESUMO' }], [{ text: 'LIMPAR CHAT' }]],
-      resize_keyboard: true
+      ...activeJourneyMenu
     });
     return;
   }
@@ -578,6 +633,62 @@ export const handleTelegramUpdate = async (body: any) => {
   const rawVal = textInput.replace('R$', '').replace(/\s/g, '').replace(',', '.').trim();
   const num = parseFloat(rawVal);
 
+  if (activeDay?.notes?.startsWith('LIVE:EARNED:')) {
+    if (!activeSession) {
+      await (supabaseAdmin.from('work_days').update({ notes: null }).eq('id', activeDay.id) as any);
+      await send('A jornada não está mais ativa. Nenhum valor foi lançado.', mainMenu);
+      return;
+    }
+    if (isNaN(num) || num < 0) {
+      await send('⚠️ Valor inválido. Informe um valor positivo, por exemplo: 18,50', cancelMenu);
+      return;
+    }
+    const platform = activeDay.notes.split(':')[2];
+    const addCents = toCents(num);
+    const currentIfoodCents = toCents(activeDay.ifood_earned);
+    const currentUberCents = toCents(activeDay.uber_earned);
+    const nextIfoodCents = platform === 'IFOOD' ? currentIfoodCents + addCents : currentIfoodCents;
+    const nextUberCents = platform === 'UBER' ? currentUberCents + addCents : currentUberCents;
+    const update = {
+      ifood_earned: fromCents(nextIfoodCents),
+      uber_earned: fromCents(nextUberCents),
+      total_earned: fromCents(nextIfoodCents + nextUberCents),
+      notes: null
+    };
+    const { data, error } = await (supabaseAdmin.from('work_days').update(update).eq('id', activeDay.id).select().single() as any);
+    if (error || !data) {
+      console.error('Failed to add live earning:', error);
+      await send('Não foi possível registrar o ganho. Tente novamente.', activeJourneyMenu);
+      return;
+    }
+    await send(
+      `<b>GANHO REGISTRADO</b>\n\niFood: ${formatCurrency(data.ifood_earned)}\nUber: ${formatCurrency(data.uber_earned)}\n<b>Total: ${formatCurrency(data.total_earned)}</b>`,
+      activeJourneyMenu
+    );
+    return;
+  }
+
+  if (activeDay?.notes === 'LIVE:ODO') {
+    if (!activeSession) {
+      await (supabaseAdmin.from('work_days').update({ notes: null }).eq('id', activeDay.id) as any);
+      await send('A jornada não está mais ativa. O odômetro não foi alterado.', mainMenu);
+      return;
+    }
+    const startOdo = Number(activeDay.odometer_start) || 0;
+    if (isNaN(num) || num < startOdo) {
+      await send(`⚠️ O odômetro atual não pode ser menor que o inicial (${formatNumberBR(activeDay.odometer_start)} km).`, cancelMenu);
+      return;
+    }
+    const { error } = await (supabaseAdmin.from('work_days').update({ odometer_end: num, notes: null }).eq('id', activeDay.id) as any);
+    if (error) {
+      console.error('Failed to update live odometer:', error);
+      await send('Não foi possível atualizar o odômetro. Tente novamente.', activeJourneyMenu);
+      return;
+    }
+    await send(`Odômetro atualizado: <b>${formatNumberBR(num)} km</b>\nRodados até agora: <b>${formatNumberBR(num - startOdo)} km</b>`, activeJourneyMenu);
+    return;
+  }
+
   if (activeDay?.notes?.startsWith('AWAITING:ODO_START_CONFIRM:')) {
     const lastOdo = parseFloat(activeDay.notes.split(':')[2]);
     let odoToUse = null;
@@ -607,8 +718,7 @@ export const handleTelegramUpdate = async (body: any) => {
     await (supabaseAdmin.from('work_days').update({ odometer_start: num, notes: null }).eq('id', activeDay.id) as any);
     await (supabaseAdmin.from('sessions').insert({ work_day_id: activeDay.id, status: 'active' as any }) as any);
     await send(`Jornada iniciada com odômetro <b>${formatNumberBR(num)} km</b>!`, {
-      keyboard: [[{ text: 'ENCERRAR JORNADA' }, { text: 'RESUMO' }], [{ text: 'LIMPAR CHAT' }]],
-      resize_keyboard: true
+      ...activeJourneyMenu
     });
     return;
   }
@@ -793,18 +903,8 @@ export const handleTelegramUpdate = async (body: any) => {
         await send(`⚠️ O odômetro final não pode ser menor que o inicial (${formatNumberBR(activeDay.odometer_start)}). Informe novamente:`, cancelMenu);
         return;
       }
-      await (supabaseAdmin.from('work_days').update({ odometer_end: num, notes: 'AWAITING:CLOSE_UBER' }).eq('id', activeDay.id) as any);
-      await send('Uber:', cancelMenu);
-      return;
-    }
-
-    if (activeDay.notes === 'AWAITING:CLOSE_UBER') {
-      if (isNaN(num) || num < 0) {
-        await send('⚠️ Valor inválido. Informe o ganho na Uber (ou 0):', cancelMenu);
-        return;
-      }
-      await (supabaseAdmin.from('work_days').update({ uber_earned: fromCents(toCents(num)), notes: 'AWAITING:CLOSE_IFOOD' }).eq('id', activeDay.id) as any);
-      await send('iFood:', cancelMenu);
+      await (supabaseAdmin.from('work_days').update({ odometer_end: num, notes: 'AWAITING:CLOSE_IFOOD' }).eq('id', activeDay.id) as any);
+      await send(`iFood (acumulado: ${formatCurrency(activeDay.ifood_earned)}):`, cancelMenu);
       return;
     }
 
@@ -813,16 +913,26 @@ export const handleTelegramUpdate = async (body: any) => {
         await send('⚠️ Valor inválido. Informe o ganho no iFood (ou 0):', cancelMenu);
         return;
       }
-      const totalEarned = fromCents(toCents(num) + toCents(activeDay.uber_earned));
-      await (supabaseAdmin.from('work_days').update({ 
-        ifood_earned: fromCents(toCents(num)), 
+      await (supabaseAdmin.from('work_days').update({ ifood_earned: fromCents(toCents(num)), notes: 'AWAITING:CLOSE_UBER' }).eq('id', activeDay.id) as any);
+      await send(`Uber (acumulado: ${formatCurrency(activeDay.uber_earned)}):`, cancelMenu);
+      return;
+    }
+
+    if (activeDay.notes === 'AWAITING:CLOSE_UBER') {
+      if (isNaN(num) || num < 0) {
+        await send('⚠️ Valor inválido. Informe o ganho na Uber (ou 0):', cancelMenu);
+        return;
+      }
+      const totalEarned = fromCents(toCents(activeDay.ifood_earned) + toCents(num));
+      await (supabaseAdmin.from('work_days').update({
+        uber_earned: fromCents(toCents(num)),
         total_earned: totalEarned,
-        notes: 'AWAITING:CLOSE_DELIVERIES' 
+        notes: 'AWAITING:CLOSE_DELIVERIES'
       }).eq('id', activeDay.id) as any);
-      
+
       const updatedDay = await getActiveWorkDay();
       const goalStr = updatedDay.daily_goal !== null ? ` (Meta: ${formatCurrency(updatedDay.daily_goal)})` : '';
-      await send(`Quantas entregas você fez hoje?${goalStr}`, cancelMenu);
+      await send(`Quantas entregas você fez hoje? Acumulado: ${updatedDay.total_deliveries ?? 0}${goalStr}`, cancelMenu);
       return;
     }
 
@@ -836,7 +946,7 @@ export const handleTelegramUpdate = async (body: any) => {
         status: 'completed' as any,
         notes: null 
       }).eq('id', activeDay.id).select().single() as any);
-      const summary = `Jornada encerrada! Uber: ${formatCurrency(res.data.uber_earned)} | iFood: ${formatCurrency(res.data.ifood_earned)} | Total: ${formatCurrency(res.data.total_earned)}`;
+      const summary = `Jornada encerrada! iFood: ${formatCurrency(res.data.ifood_earned)} | Uber: ${formatCurrency(res.data.uber_earned)} | Total: ${formatCurrency(res.data.total_earned)}`;
       await send(summary, {
         keyboard: [[{ text: 'CORRIGIR DIA' }, { text: 'LIMPAR CHAT' }, { text: 'RESUMO' }], [{ text: 'MENU' }]],
         resize_keyboard: true
