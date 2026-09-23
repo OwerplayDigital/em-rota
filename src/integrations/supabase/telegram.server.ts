@@ -332,7 +332,16 @@ export const handleTelegramUpdate = async (body: any) => {
     }
 
     const endTime = new Date().toISOString();
-    await (supabaseAdmin.from('sessions').update({ end_time: endTime, status: 'completed' as any }).eq('id', activeSession.id) as any);
+    const { error: endSessionError } = await (supabaseAdmin
+      .from('sessions')
+      .update({ end_time: endTime, status: 'completed' as any })
+      .eq('id', activeSession.id)
+      .eq('status', 'active' as any) as any);
+    if (endSessionError) {
+      console.error('Failed to end active session:', endSessionError);
+      await send('Não foi possível encerrar a jornada. Nenhum registro foi alterado.', mainMenu);
+      return;
+    }
     
     const day = await getActiveWorkDay();
     if (!day) return;
@@ -371,6 +380,10 @@ export const handleTelegramUpdate = async (body: any) => {
     }
     if (!activeDay) {
       await send('Nenhum dado para hoje.', mainMenu);
+      return;
+    }
+    if (activeDay.status === 'completed') {
+      await send('O dia de hoje já está fechado.', { keyboard: [[{ text: 'CORRIGIR DIA' }, { text: 'RESUMO' }], [{ text: 'MENU' }]], resize_keyboard: true });
       return;
     }
     await (supabaseAdmin.from('work_days').update({ notes: 'AWAITING:CLOSE_ODO' }).eq('id', activeDay.id) as any);
@@ -701,6 +714,10 @@ export const handleTelegramUpdate = async (body: any) => {
       }
     } else if (!isNaN(num)) {
       if (mode === 'EARNED_VALUE') {
+        if (num < 0) {
+          await send('⚠️ O valor dos ganhos não pode ser negativo. Informe novamente:', cancelMenu);
+          return;
+        }
         const platform = parts[2];
         const isUber = platform === 'UBER';
         
@@ -782,7 +799,7 @@ export const handleTelegramUpdate = async (body: any) => {
     }
 
     if (activeDay.notes === 'AWAITING:CLOSE_UBER') {
-      if (isNaN(num)) {
+      if (isNaN(num) || num < 0) {
         await send('⚠️ Valor inválido. Informe o ganho na Uber (ou 0):', cancelMenu);
         return;
       }
@@ -792,7 +809,7 @@ export const handleTelegramUpdate = async (body: any) => {
     }
 
     if (activeDay.notes === 'AWAITING:CLOSE_IFOOD') {
-      if (isNaN(num)) {
+      if (isNaN(num) || num < 0) {
         await send('⚠️ Valor inválido. Informe o ganho no iFood (ou 0):', cancelMenu);
         return;
       }
@@ -810,7 +827,7 @@ export const handleTelegramUpdate = async (body: any) => {
     }
 
     if (activeDay.notes === 'AWAITING:CLOSE_DELIVERIES') {
-      if (isNaN(num)) {
+      if (isNaN(num) || num < 0 || !Number.isInteger(num)) {
         await send('⚠️ Valor inválido. Informe o total de entregas:', cancelMenu);
         return;
       }
