@@ -120,9 +120,6 @@ function HistoryPage() {
           <div className="w-14 shrink-0 md:hidden" aria-hidden="true" />
           <div className="min-w-0 space-y-0.5">
             <h1 className="text-3xl font-black tracking-[-0.04em]">{filter === 'mes' ? 'Este Mês' : 'Histórico'}</h1>
-            <p className="text-white/45 text-[10px] font-bold tracking-[0.18em] uppercase">
-              {filter === 'mes' ? 'Acompanhamento do mês atual.' : 'Meses anteriores e jornadas já concluídas.'}
-            </p>
           </div>
         </div>
 
