@@ -1,8 +1,13 @@
-import { format, subDays, startOfDay, endOfDay, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns';
+import { format, subDays, startOfDay, endOfDay, startOfMonth, startOfYear } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
 import { toCents, fromCents } from './money';
 
 const TIMEZONE = 'America/Sao_Paulo';
+
+export const getLocalDateString = (date: Date = new Date()) => {
+  const zonedDate = toZonedTime(date, TIMEZONE);
+  return format(zonedDate, 'yyyy-MM-dd');
+};
 
 export const getDatesForPeriod = (period: string) => {
   const now = new Date();
@@ -42,12 +47,11 @@ export const formatDateBR = (dateStr: string) => {
 
 export const formatTimeBR = (date: string | Date) => {
   if (!date) return '-';
-  const zonedDate = toZonedTime(new Date(date), TIMEZONE);
   return new Intl.DateTimeFormat('pt-BR', {
     timeZone: TIMEZONE,
     hour: '2-digit',
     minute: '2-digit'
-  }).format(zonedDate);
+  }).format(new Date(date));
 };
 
 export const formatDuration = (ms: number) => {
@@ -64,7 +68,6 @@ export const formatCurrency = (value: number) => {
 };
 
 export const calculateMetrics = (workDays: any[], sessions: any[]) => {
-  // Todas as somas monetárias são feitas em centavos inteiros para nunca perder centavos
   const totalEarnedCents = workDays.reduce((acc, wd) => acc + toCents(wd.total_earned), 0);
   const totalUberCents = workDays.reduce((acc, wd) => acc + toCents(wd.uber_earned), 0);
   const totalIfoodCents = workDays.reduce((acc, wd) => acc + toCents(wd.ifood_earned), 0);
@@ -108,7 +111,7 @@ export const calculateMetrics = (workDays: any[], sessions: any[]) => {
 export const calculateGoalMetrics = (workDays: any[], goal: number | null) => {
   if (goal === null) return null;
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = getLocalDateString();
   const todayData = workDays.find(wd => wd.date === todayStr);
   const earningsCents = toCents(todayData?.total_earned);
   const goalCents = toCents(goal);
@@ -127,7 +130,6 @@ export const calculateGoalMetrics = (workDays: any[], goal: number | null) => {
 };
 
 export const getChartData = (workDays: any[], sessions: any[]) => {
-  // Group by date
   const dayMap = new Map();
   
   workDays.forEach(wd => {
