@@ -26,6 +26,7 @@ const FILTERS = [
   { id: 'todos', label: 'Todos' },
   { id: 'semana', label: 'Esta Semana' },
   { id: 'mes', label: 'Este Mês' },
+  { id: 'ano', label: 'Este Ano' },
 ] as const
 
 type FilterId = (typeof FILTERS)[number]['id']
@@ -61,15 +62,19 @@ function dateRangeForFilter(filter: FilterId) {
       return { startDate: startOfWeekBR(), endDate }
     case 'mes':
       return { startDate: startOfMonthBR(), endDate }
+    case 'ano':
+      return { startDate: `${getLocalDateString().slice(0, 4)}-01-01`, endDate }
     default:
       return { startDate: '2020-01-01', endDate }
   }
 }
 
 function HistoryPage() {
+  const search = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
+  const initialFilter = (search?.get('periodo') as FilterId) || 'todos'
   const [selectedDay, setSelectedDay] = useState<any>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
-  const [filter, setFilter] = useState<FilterId>('todos')
+  const [filter, setFilter] = useState<FilterId>(FILTERS.some(f => f.id === initialFilter) ? initialFilter : 'todos')
   const [showEmpty, setShowEmpty] = useState(false)
 
   // O filtro selecionado define o intervalo de datas buscado no Supabase
@@ -93,7 +98,16 @@ function HistoryPage() {
       })
   }, [data, filter])
 
-  const activeDays = historyItems.filter(i => (i.total_earned || 0) > 0 || (i.total_deliveries || 0) > 0)
+  const periodSummary = useMemo(() => {
+    const totalEarned = historyItems.reduce((sum, i) => sum + Number(i.total_earned || 0), 0)
+    const ifoodEarned = historyItems.reduce((sum, i) => sum + Number(i.ifood_earned || 0), 0)
+    const uberEarned = historyItems.reduce((sum, i) => sum + Number(i.uber_earned || 0), 0)
+    const ifoodDeliveries = historyItems.reduce((sum, i) => sum + Number(i.ifood_deliveries || 0), 0)
+    const uberDeliveries = historyItems.reduce((sum, i) => sum + Number(i.uber_deliveries || 0), 0)
+    return { totalEarned, ifoodEarned, uberEarned, ifoodDeliveries, uberDeliveries, totalDeliveries: ifoodDeliveries + uberDeliveries }
+  }, [historyItems])
+
+    const activeDays = historyItems.filter(i => (i.total_earned || 0) > 0 || (i.total_deliveries || 0) > 0)
   const emptyDays = historyItems.filter(i => (i.total_earned || 0) === 0 && (i.total_deliveries || 0) === 0)
   const visibleDays = showEmpty ? [...activeDays, ...emptyDays].sort((a, b) => b.date.localeCompare(a.date)) : activeDays
 
@@ -127,6 +141,16 @@ function HistoryPage() {
               {f.label}
             </button>
           ))}
+        </div>
+
+        <div className="rounded-2xl border border-border bg-card p-5">
+          <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Resumo do período</div>
+          <div className="mt-2 text-3xl font-bold tracking-tight">{formatCurrency(periodSummary.totalEarned)}</div>
+          <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+            <div><div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">iFood</div><div className="font-bold">{formatCurrency(periodSummary.ifoodEarned)}</div><div className="text-xs text-muted-foreground">{periodSummary.ifoodDeliveries} entregas</div></div>
+            <div><div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Uber</div><div className="font-bold">{formatCurrency(periodSummary.uberEarned)}</div><div className="text-xs text-muted-foreground">{periodSummary.uberDeliveries} entregas</div></div>
+          </div>
+          <div className="mt-4 border-t border-border pt-3 text-xs font-semibold text-muted-foreground">Total: {periodSummary.totalDeliveries} entregas</div>
         </div>
 
         {/* Feed de Cards */}
@@ -230,8 +254,8 @@ function HistoryCard({ item, expanded, onToggle }: { item: any; expanded: boolea
                   Por Plataforma
                 </h3>
                 <div className="space-y-2">
-                  <PlatformRow label="Uber" value={uber} color="bg-cyan-500" />
                   <PlatformRow label="iFood" value={ifood} color="bg-red-500" />
+                  <PlatformRow label="Uber" value={uber} color="bg-cyan-500" />
                   {extra > 0 && <PlatformRow label="Extra / Particular" value={extra} color="bg-primary" />}
                 </div>
               </div>
