@@ -28,7 +28,7 @@ function DashboardPage() {
   const earned = Number(day?.total_earned || 0)
   const pct = goal > 0 ? Math.round((earned/goal)*100) : 0
 
-  return <main className="h-[100dvh] overflow-hidden text-[#f6f6f3]" style={{background:C.bg}}>
+  return <main className="fixed inset-0 overflow-hidden text-[#f6f6f3]" style={{background:C.bg}}>
     <div className="mx-auto flex h-full max-w-[480px] flex-col overflow-hidden px-[22px] pb-[18px] pt-5 max-[700px]:pb-3 max-[700px]:pt-[14px]">
       <header className="flex h-7 shrink-0 items-start justify-between text-[11px]">
         <b className="tracking-[.03em]">EM ROTA</b>
