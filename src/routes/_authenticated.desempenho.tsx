@@ -102,7 +102,7 @@ function PerformancePage() {
   }, [data])
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-foreground">
+    <div className="min-h-screen bg-[#111216] text-white">
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -110,10 +110,10 @@ function PerformancePage() {
       >
         {/* Cabeçalho */}
         <div className="flex items-center gap-4">
-          <div className="w-14 shrink-0 md:hidden" aria-hidden="true" />
+          <div className="hidden" aria-hidden="true" />
           <div className="min-w-0 space-y-0.5">
-            <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Desempenho</h1>
-            <p className="text-muted-foreground text-[11px] font-light tracking-wide uppercase">
+            <h1 className="text-3xl font-black tracking-[-0.04em] md:text-4xl">Desempenho</h1>
+            <p className="text-white/40 text-[10px] font-bold tracking-[0.18em] uppercase">
               Insights avançados da sua rentabilidade.
             </p>
           </div>
@@ -128,8 +128,8 @@ function PerformancePage() {
               className={cn(
                 "shrink-0 rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-wide transition-all active:scale-95",
                 period === p.id
-                  ? "bg-primary border-primary text-primary-foreground shadow-sm"
-                  : "bg-white border-[#e2e8f0] text-muted-foreground hover:text-foreground hover:border-foreground/20"
+                  ? "bg-[#B8E64A] border-[#B8E64A] text-black"
+                  : "bg-white/5 border-white/10 text-white/50 hover:text-white"
               )}
             >
               {p.label}
@@ -148,24 +148,24 @@ function PerformancePage() {
         </div>
 
         {/* Comparativo de Plataformas */}
-        <div className="rounded-2xl border border-[#e2e8f0] bg-white p-5 md:p-6 shadow-[0_2px_8px_-4px_rgba(0,0,0,0.04)] space-y-5">
+        <div className="rounded-[28px] border border-white/10 bg-[#6750D8] p-5 md:p-6 text-white space-y-5">
           <div className="flex items-center justify-between">
-            <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">
+            <h3 className="text-[10px] font-black text-white/60 uppercase tracking-[0.2em]">
               Plataformas
             </h3>
-            <span className="text-[10px] font-semibold text-muted-foreground">
+            <span className="text-[10px] font-semibold text-white/55">
               Total: {formatCurrency(platform.total)}
             </span>
           </div>
 
           {/* Barra proporcional */}
-          <div className="h-2.5 w-full rounded-full bg-muted overflow-hidden flex">
+          <div className="h-2.5 w-full rounded-full bg-white/15 overflow-hidden flex">
             <div
-              className="h-full bg-red-500 transition-all duration-500"
+              className="h-full bg-[#B8E64A] transition-all duration-500"
               style={{ width: `${platform.ifoodPct}%` }}
             />
             <div
-              className="h-full bg-slate-800 transition-all duration-500"
+              className="h-full bg-[#168C84] transition-all duration-500"
               style={{ width: `${platform.uberPct}%` }}
             />
           </div>
@@ -173,14 +173,14 @@ function PerformancePage() {
           <div className="space-y-2">
             <PlatformCompareRow
               label="iFood"
-              dotColor="bg-red-500"
+              dotColor="bg-[#B8E64A]"
               pct={platform.ifoodPct}
               total={platform.ifood}
               avgPerDelivery={metrics.totalDeliveries > 0 ? fromCents(Math.round(toCents(platform.ifood) / metrics.totalDeliveries)) : 0}
             />
             <PlatformCompareRow
               label="Uber"
-              dotColor="bg-slate-800"
+              dotColor="bg-[#168C84]"
               pct={platform.uberPct}
               total={platform.uber}
               avgPerDelivery={metrics.totalDeliveries > 0 ? fromCents(Math.round(toCents(platform.uber) / metrics.totalDeliveries)) : 0}
@@ -189,10 +189,10 @@ function PerformancePage() {
         </div>
 
         {/* Recordes Pessoais */}
-        <div className="rounded-2xl border border-amber-200/60 bg-gradient-to-b from-amber-50/80 to-white p-5 md:p-6 shadow-[0_2px_8px_-4px_rgba(0,0,0,0.04)] space-y-4">
+        <div className="rounded-[28px] border border-white/10 bg-[#F06A4F] p-5 md:p-6 text-white space-y-4">
           <div className="flex items-center gap-2">
-            <Trophy className="w-4 h-4 text-amber-500" />
-            <h3 className="text-[10px] font-bold text-amber-600 uppercase tracking-[0.2em]">
+            <Trophy className="w-4 h-4 text-white" />
+            <h3 className="text-[10px] font-black text-white/70 uppercase tracking-[0.2em]">
               Recordes Pessoais
             </h3>
           </div>
@@ -221,16 +221,16 @@ function PerformancePage() {
 
 function MetricCard({ icon: Icon, label, value }: { icon: any; label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-[#e2e8f0] bg-white p-4 shadow-[0_2px_8px_-4px_rgba(0,0,0,0.04)] space-y-2.5">
+    <div className="rounded-[22px] border border-white/10 bg-[#1A1C20] p-4 space-y-2.5">
       <div className="flex items-center gap-2">
-        <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
-          <Icon className="w-3.5 h-3.5 text-primary" />
+        <div className="w-7 h-7 rounded-lg bg-[#B8E64A]/10 flex items-center justify-center">
+          <Icon className="w-3.5 h-3.5 text-[#B8E64A]" />
         </div>
-        <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest leading-tight">
+        <span className="text-[9px] font-bold text-white/45 uppercase tracking-widest leading-tight">
           {label}
         </span>
       </div>
-      <div className="text-lg font-bold tracking-tight text-foreground truncate">{value}</div>
+      <div className="text-lg font-black tracking-tight text-white truncate">{value}</div>
     </div>
   )
 }
@@ -243,29 +243,29 @@ function PlatformCompareRow({ label, dotColor, pct, total, avgPerDelivery }: {
   avgPerDelivery: number
 }) {
   return (
-    <div className="flex items-center justify-between rounded-xl border border-[#e2e8f0] bg-white px-4 py-3">
+    <div className="flex items-center justify-between rounded-[18px] border border-white/10 bg-black/10 px-4 py-3">
       <div className="flex items-center gap-2.5 min-w-0">
         <div className={cn("w-2.5 h-2.5 rounded-full shrink-0", dotColor)} />
         <div className="min-w-0">
-          <div className="text-xs font-semibold text-foreground">{label}</div>
-          <div className="text-[10px] text-muted-foreground">
+          <div className="text-xs font-semibold text-white">{label}</div>
+          <div className="text-[10px] text-white/55">
             {pct.toFixed(0)}% do total · {avgPerDelivery > 0 ? `${formatCurrency(avgPerDelivery)}/entrega` : '—'}
           </div>
         </div>
       </div>
-      <span className="text-sm font-bold text-foreground shrink-0">{formatCurrency(total)}</span>
+      <span className="text-sm font-bold text-white shrink-0">{formatCurrency(total)}</span>
     </div>
   )
 }
 
 function RecordRow({ emoji, label, value }: { emoji: string; label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between rounded-xl border border-amber-100 bg-white px-4 py-3">
+    <div className="flex items-center justify-between rounded-[18px] border border-white/15 bg-black/10 px-4 py-3">
       <div className="flex items-center gap-3 min-w-0">
         <span className="text-base leading-none">{emoji}</span>
-        <span className="text-xs font-medium text-muted-foreground">{label}</span>
+        <span className="text-xs font-medium text-white/65">{label}</span>
       </div>
-      <span className="text-sm font-bold text-foreground shrink-0">{value}</span>
+      <span className="text-sm font-bold text-white shrink-0">{value}</span>
     </div>
   )
 }
