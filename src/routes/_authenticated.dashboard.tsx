@@ -51,7 +51,7 @@ function DashboardPage() {
             value={last ? formatCurrency(Number(last.total_earned)||0) : 'R$ 0,00'}
             detail={last ? `${last.total_deliveries||0} entregas · ${lastKm.toLocaleString('pt-BR',{maximumFractionDigits:1})} km` : 'Nenhuma jornada concluída'} />
           <CardLink cls="top-[22%] z-[2]" color={C.coral} to="/historico" label="HISTÓRICO"
-            value="Ver jornadas" detail="Ganhos, entregas e desempenho por período" />
+            value="Histórico" detail="Meses anteriores · ganhos, entregas e desempenho" />
           <CardLink cls="top-[44%] z-[3]" color={C.purple} to="/historico" search={{ periodo: "mes" }} label="ESTE MÊS"
             value={formatCurrency(month.totalEarned)}
             detail={`iFood ${formatCurrency(month.totalIfood)} · Uber ${formatCurrency(month.totalUber)} · ${month.totalDeliveries} entregas`} />
