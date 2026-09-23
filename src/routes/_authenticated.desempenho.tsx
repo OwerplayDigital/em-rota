@@ -10,7 +10,8 @@ import { fetchDashboardData } from '@/lib/dashboard.functions'
 import {
   calculateMetrics,
   formatCurrency,
-  formatDuration
+  formatDuration,
+  getLocalDateString
 } from '@/lib/dashboard-utils'
 import { toCents, fromCents } from '@/lib/money'
 import { cn } from '@/lib/utils'
@@ -26,7 +27,9 @@ const PERIODS = [
 ] as const
 
 function periodStart(period: string): string {
-  const now = new Date()
+  const localToday = getLocalDateString()
+  const [year, month, day] = localToday.split('-').map(Number)
+  const now = new Date(year, month - 1, day)
   const d = new Date(now)
   if (period === '7d') d.setDate(now.getDate() - 6)
   else if (period === '30d') d.setDate(now.getDate() - 29)
@@ -42,7 +45,7 @@ function PerformancePage() {
     queryFn: () => fetchDashboardData({
       data: {
         startDate: '2020-01-01',
-        endDate: new Date().toISOString().split('T')[0]
+        endDate: getLocalDateString()
       }
     })
   })
