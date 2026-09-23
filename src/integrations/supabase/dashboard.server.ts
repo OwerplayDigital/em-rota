@@ -41,7 +41,32 @@ export const getDashboardData = async (startDate: string, endDate: string) => {
     sessions = sessData || [];
   }
 
-  return { workDays, sessions, todayGoal };
+  const { data: activeSession, error: activeSessionError } = await supabaseAdmin
+    .from('sessions')
+    .select('*')
+    .eq('status', 'active')
+    .maybeSingle();
+
+  if (activeSessionError) throw activeSessionError;
+
+  const { data: lastCompletedDay, error: lastCompletedError } = await supabaseAdmin
+    .from('work_days')
+    .select('*')
+    .eq('status', 'completed')
+    .order('date', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (lastCompletedError) throw lastCompletedError;
+
+  return {
+    workDays,
+    sessions,
+    todayGoal,
+    activeSession: activeSession ?? null,
+    hasActiveSession: Boolean(activeSession),
+    lastCompletedDay: lastCompletedDay ?? null,
+  };
 };
 
 export const updateDailyGoal = async (goal: number) => {
