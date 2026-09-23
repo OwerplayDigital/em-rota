@@ -430,6 +430,46 @@ export const handleTelegramUpdate = async (body: any) => {
     return;
   }
 
+  if (textInput === 'VOLTAR À JORNADA' && activeDay?.notes === 'AWAITING:CLOSE_CONFIRM') {
+    await (supabaseAdmin.from('work_days').update({ notes: null }).eq('id', activeDay.id) as any);
+    await send('Fechamento cancelado. Você pode continuar lançando os dados antes de fechar o dia.', mainMenu);
+    return;
+  }
+
+  if (textInput === 'CONFIRMAR FECHAMENTO' && activeDay?.notes === 'AWAITING:CLOSE_CONFIRM') {
+    const ifoodDeliveries = Number(activeDay.ifood_deliveries) || 0;
+    const uberDeliveries = Number(activeDay.uber_deliveries) || 0;
+    const totalDeliveries = ifoodDeliveries + uberDeliveries;
+    const totalEarned = fromCents(toCents(activeDay.ifood_earned) + toCents(activeDay.uber_earned));
+    const { data: closedDay, error } = await (supabaseAdmin
+      .from('work_days')
+      .update({
+        total_deliveries: totalDeliveries,
+        total_earned: totalEarned,
+        status: 'completed' as any,
+        notes: null
+      })
+      .eq('id', activeDay.id)
+      .eq('status', 'in_progress' as any)
+      .select()
+      .maybeSingle() as any);
+
+    if (error || !closedDay) {
+      console.error('Failed to confirm live day close:', error);
+      await send('Não foi possível fechar o dia. Nenhum fechamento foi confirmado.', mainMenu);
+      return;
+    }
+
+    await send(
+      `<b>DIA FECHADO</b>\n\niFood: ${formatCurrency(closedDay.ifood_earned)} · ${closedDay.ifood_deliveries ?? 0} entrega(s)\nUber: ${formatCurrency(closedDay.uber_earned)} · ${closedDay.uber_deliveries ?? 0} entrega(s)\n<b>Total: ${formatCurrency(closedDay.total_earned)} · ${closedDay.total_deliveries ?? 0} entrega(s)</b>`,
+      {
+        keyboard: [[{ text: 'CORRIGIR DIA' }, { text: 'RESUMO' }], [{ text: 'LIMPAR CHAT' }], [{ text: 'MENU' }]],
+        resize_keyboard: true
+      }
+    );
+    return;
+  }
+
   // Correction Flow
   if (textInput === 'CORRIGIR DIA') {
     if (!activeDay || activeDay.status !== 'completed') {
@@ -892,6 +932,37 @@ export const handleTelegramUpdate = async (body: any) => {
         await send(`⚠️ O odômetro final não pode ser menor que o inicial (${formatNumberBR(activeDay.odometer_start)}). Informe novamente:`, cancelMenu);
         return;
       }
+      const hasLiveData =
+        (Number(activeDay.ifood_deliveries) || 0) > 0 ||
+        (Number(activeDay.uber_deliveries) || 0) > 0;
+
+      if (hasLiveData) {
+        const { data: updatedDay, error } = await (supabaseAdmin
+          .from('work_days')
+          .update({ odometer_end: num, notes: 'AWAITING:CLOSE_CONFIRM' })
+          .eq('id', activeDay.id)
+          .select()
+          .single() as any);
+        if (error || !updatedDay) {
+          console.error('Failed to prepare live close confirmation:', error);
+          await send('Não foi possível preparar o fechamento. Tente novamente.', mainMenu);
+          return;
+        }
+        await send(
+          `<b>CONFIRMAR FECHAMENTO</b>\n\n` +
+          `iFood: ${formatCurrency(updatedDay.ifood_earned)} · ${updatedDay.ifood_deliveries ?? 0} entrega(s)\n` +
+          `Uber: ${formatCurrency(updatedDay.uber_earned)} · ${updatedDay.uber_deliveries ?? 0} entrega(s)\n` +
+          `<b>Total: ${formatCurrency(updatedDay.total_earned)} · ${updatedDay.total_deliveries ?? 0} entrega(s)</b>\n` +
+          `Odômetro final: ${formatNumberBR(updatedDay.odometer_end)} km\n\n` +
+          `Se estiver tudo certo, confirme. Se faltou algum lançamento, volte à jornada e registre antes de fechar.`,
+          {
+            keyboard: [[{ text: 'CONFIRMAR FECHAMENTO' }], [{ text: 'VOLTAR À JORNADA' }], [{ text: 'CANCELAR' }]],
+            resize_keyboard: true
+          }
+        );
+        return;
+      }
+
       await (supabaseAdmin.from('work_days').update({ odometer_end: num, notes: 'AWAITING:CLOSE_IFOOD' }).eq('id', activeDay.id) as any);
       await send(`iFood (acumulado: ${formatCurrency(activeDay.ifood_earned)}):`, cancelMenu);
       return;
