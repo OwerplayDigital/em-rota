@@ -120,13 +120,13 @@ function PerformancePage() {
         </div>
 
         {/* Filtros de período */}
-        <div className="flex gap-2 overflow-x-auto -mx-5 px-5 md:mx-0 md:px-0">
+        <div className="grid grid-cols-3 gap-2">
           {PERIODS.map(p => (
             <button
               key={p.id}
               onClick={() => setPeriod(p.id)}
               className={cn(
-                "shrink-0 rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-wide transition-all active:scale-95",
+                "min-w-0 rounded-full border px-2 py-2 text-[10px] font-semibold uppercase tracking-tight transition-all active:scale-95 sm:text-xs sm:tracking-wide",
                 period === p.id
                   ? "bg-[#B8E64A] border-[#B8E64A] text-black"
                   : "bg-white/5 border-white/10 text-white/50 hover:text-white"
@@ -148,7 +148,7 @@ function PerformancePage() {
         </div>
 
         {/* Comparativo de Plataformas */}
-        <div className="rounded-[28px] border border-white/10 bg-[#6750D8] p-5 md:p-6 text-white space-y-5">
+        <div className="rounded-[28px] border border-white/10 bg-[#1A1C20] p-5 md:p-6 text-white space-y-5">
           <div className="flex items-center justify-between">
             <h3 className="text-[10px] font-black text-white/60 uppercase tracking-[0.2em]">
               Plataformas
@@ -159,13 +159,13 @@ function PerformancePage() {
           </div>
 
           {/* Barra proporcional */}
-          <div className="h-2.5 w-full rounded-full bg-white/15 overflow-hidden flex">
+          <div className="h-2.5 w-full rounded-full bg-white/10 overflow-hidden flex">
             <div
-              className="h-full bg-[#B8E64A] transition-all duration-500"
+              className="h-full bg-[#EA1D2C] transition-all duration-500"
               style={{ width: `${platform.ifoodPct}%` }}
             />
             <div
-              className="h-full bg-[#168C84] transition-all duration-500"
+              className="h-full bg-[#000000] transition-all duration-500"
               style={{ width: `${platform.uberPct}%` }}
             />
           </div>
@@ -173,14 +173,14 @@ function PerformancePage() {
           <div className="space-y-2">
             <PlatformCompareRow
               label="iFood"
-              dotColor="bg-[#B8E64A]"
+              dotColor="bg-[#EA1D2C]"
               pct={platform.ifoodPct}
               total={platform.ifood}
               avgPerDelivery={metrics.totalDeliveries > 0 ? fromCents(Math.round(toCents(platform.ifood) / metrics.totalDeliveries)) : 0}
             />
             <PlatformCompareRow
               label="Uber"
-              dotColor="bg-[#168C84]"
+              dotColor="bg-black ring-1 ring-white/25"
               pct={platform.uberPct}
               total={platform.uber}
               avgPerDelivery={metrics.totalDeliveries > 0 ? fromCents(Math.round(toCents(platform.uber) / metrics.totalDeliveries)) : 0}
