@@ -113,9 +113,6 @@ function PerformancePage() {
           <div className="hidden" aria-hidden="true" />
           <div className="min-w-0 space-y-0.5">
             <h1 className="text-3xl font-black tracking-[-0.04em] md:text-4xl">Desempenho</h1>
-            <p className="text-white/40 text-[10px] font-bold tracking-[0.18em] uppercase">
-              Insights avançados da sua rentabilidade.
-            </p>
           </div>
         </div>
 
