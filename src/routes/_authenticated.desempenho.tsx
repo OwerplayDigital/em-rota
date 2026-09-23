@@ -220,7 +220,7 @@ function PerformancePage() {
           </div>
         </div>
       </motion.div>
-    </button>
+    </div>
   )
 }
 
