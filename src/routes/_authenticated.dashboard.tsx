@@ -4,111 +4,85 @@ import { useSuspenseQuery } from '@tanstack/react-query'
 import { fetchDashboardData } from '@/lib/dashboard.functions'
 import { calculateMetrics, formatCurrency, formatDuration, getDatesForPeriod, getLocalDateString } from '@/lib/dashboard-utils'
 
-export const Route = createFileRoute('/_authenticated/dashboard')({
-  component: DashboardPage,
-})
+export const Route = createFileRoute('/_authenticated/dashboard')({ component: DashboardPage })
 
-const COLORS = {
-  bg: '#111315',
-  green: '#B8E64A',
-  coral: '#F06A4F',
-  purple: '#6750D8',
-  teal: '#168C84',
-  cream: '#F2EEE6',
-}
+const C = { bg:'#111216', green:'#B8E64A', coral:'#F06A4F', purple:'#6750D8', teal:'#168C84' }
 
 function DashboardPage() {
   const today = useMemo(() => getLocalDateString(), [])
-  const monthRange = useMemo(() => getDatesForPeriod('Este mês'), [])
+  const range = useMemo(() => getDatesForPeriod('Este mês'), [])
   const { data } = useSuspenseQuery({
-    queryKey: ['dashboard', monthRange.startDate, monthRange.endDate],
-    queryFn: () => fetchDashboardData({ data: monthRange }),
-    refetchInterval: 15000,
+    queryKey:['dashboard', range.startDate, range.endDate],
+    queryFn:() => fetchDashboardData({ data:range }),
+    refetchInterval:15000,
   })
+  const month = useMemo(() => calculateMetrics(data.workDays, data.sessions), [data])
+  const day = data.workDays.find((d:any) => d.date === today)
+  const session = data.activeSession
+  const active = Boolean(data.hasActiveSession && session && day)
+  const elapsed = session?.start_time ? Math.max(0, Date.now()-new Date(session.start_time).getTime()) : 0
+  const km = day?.odometer_start != null && day?.odometer_end != null ? Math.max(0,Number(day.odometer_end)-Number(day.odometer_start)) : 0
+  const last = data.lastCompletedDay
+  const lastKm = last?.odometer_start != null && last?.odometer_end != null ? Math.max(0,Number(last.odometer_end)-Number(last.odometer_start)) : 0
+  const goal = Number(day?.daily_goal || data.todayGoal || 0)
+  const earned = Number(day?.total_earned || 0)
+  const pct = goal > 0 ? Math.round((earned/goal)*100) : 0
 
-  const monthMetrics = useMemo(() => calculateMetrics(data.workDays, data.sessions), [data])
-  const todayDay = data.workDays.find((day: any) => day.date === today)
-  const activeSession = data.activeSession
-  const isActive = Boolean(data.hasActiveSession && activeSession && todayDay)
+  return <main className="h-[100dvh] overflow-hidden text-[#f6f6f3]" style={{background:C.bg}}>
+    <div className="mx-auto flex h-full max-w-[480px] flex-col overflow-hidden px-[22px] pb-[18px] pt-5 max-[700px]:pb-3 max-[700px]:pt-[14px]">
+      <header className="flex h-7 shrink-0 items-start justify-between text-[11px]">
+        <b className="tracking-[.03em]">EM ROTA</b>
+        <span className="text-[#92969d]">{active ? '● trabalhando' : '● disponível'}</span>
+      </header>
 
-  const activeElapsed = activeSession?.start_time
-    ? Math.max(0, Date.now() - new Date(activeSession.start_time).getTime())
-    : 0
-  const currentKm = todayDay?.odometer_start != null && todayDay?.odometer_end != null
-    ? Math.max(0, Number(todayDay.odometer_end) - Number(todayDay.odometer_start))
-    : 0
+      <section className="relative mt-2 min-h-0 flex-1 max-[700px]:mt-1">
+        {active ? <>
+          <Card cls="top-0 z-[1]" color={C.green} dark label="GANHOS" value={formatCurrency(earned)}
+            detail={goal>0 ? `${pct}% da meta de ${formatCurrency(goal)}` : `iFood ${formatCurrency(Number(day.ifood_earned)||0)} · Uber ${formatCurrency(Number(day.uber_earned)||0)}`} />
+          <Card cls="top-[22%] z-[2]" color={C.coral} label="ENTREGAS" value={String(day.total_deliveries||0)}
+            detail={`${day.ifood_deliveries||0} iFood + ${day.uber_deliveries||0} Uber`} />
+          <Card cls="top-[44%] z-[3]" color={C.purple} label="TEMPO" value={formatDuration(elapsed)}
+            detail={`jornada iniciada às ${new Date(session.start_time).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'})}`} />
+          <Card cls="top-[66%] z-[4]" color={C.teal} label="KM RODADOS HOJE" value={`${km.toLocaleString('pt-BR',{maximumFractionDigits:1})} km`}
+            detail={`odômetro inicial ${Number(day.odometer_start||0).toLocaleString('pt-BR')} km`}
+            split={<><span>Distância da jornada</span><span>{day.odometer_end != null ? `Atual ${Number(day.odometer_end).toLocaleString('pt-BR')} km` : 'Aguardando atualização'}</span></>} />
+        </> : <>
+          <CardLink cls="top-0 z-[1]" color={C.green} to="/historico" dark label="ÚLTIMA JORNADA"
+            value={last ? formatCurrency(Number(last.total_earned)||0) : 'R$ 0,00'}
+            detail={last ? `${last.total_deliveries||0} entregas · ${lastKm.toLocaleString('pt-BR',{maximumFractionDigits:1})} km` : 'Nenhuma jornada concluída'} />
+          <CardLink cls="top-[22%] z-[2]" color={C.coral} to="/historico" label="HISTÓRICO"
+            value="Ver jornadas" detail="Ganhos, entregas e desempenho por período" />
+          <CardLink cls="top-[44%] z-[3]" color={C.purple} to="/historico" label="ESTE MÊS"
+            value={formatCurrency(month.totalEarned)}
+            detail={`iFood ${formatCurrency(month.totalIfood)} · Uber ${formatCurrency(month.totalUber)} · ${month.totalDeliveries} entregas`} />
+          <CardLink cls="top-[66%] z-[4]" color={C.teal} to="/historico" label="KM RODADOS NO MÊS"
+            value={`${month.totalDistance.toLocaleString('pt-BR',{maximumFractionDigits:1})} km`}
+            detail="Abrir detalhes do período" />
+        </>}
+      </section>
 
-  const lastDay = data.lastCompletedDay
-  const lastKm = lastDay?.odometer_start != null && lastDay?.odometer_end != null
-    ? Math.max(0, Number(lastDay.odometer_end) - Number(lastDay.odometer_start))
-    : 0
-
-  return (
-    <main className="h-[100dvh] overflow-hidden px-4 pb-4 pt-3 md:px-8" style={{ background: COLORS.bg }}>
-      <div className="mx-auto flex h-full w-full max-w-md flex-col">
-        <header className="mb-2 flex items-center justify-between pl-12 md:pl-0">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-white/45">Em Rota</p>
-            <h1 className="text-xl font-semibold tracking-tight text-white">{isActive ? 'Jornada em andamento' : 'Seu dia'}</h1>
-          </div>
-          {isActive && <span className="rounded-full bg-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-white/80">Ao vivo</span>}
-        </header>
-
-        {isActive ? (
-          <div className="relative min-h-0 flex-1">
-            <StackCard top="0%" color={COLORS.green} label="Ganhos" value={formatCurrency(Number(todayDay?.total_earned) || 0)}
-              detail={<>iFood {formatCurrency(Number(todayDay?.ifood_earned) || 0)} · {todayDay?.ifood_deliveries ?? 0} entregas<br/>Uber {formatCurrency(Number(todayDay?.uber_earned) || 0)} · {todayDay?.uber_deliveries ?? 0} entregas</>} />
-            <StackCard top="25%" color={COLORS.coral} label="Entregas" value={String(todayDay?.total_deliveries ?? 0)}
-              detail={<>iFood {todayDay?.ifood_deliveries ?? 0} · Uber {todayDay?.uber_deliveries ?? 0}</>} />
-            <StackCard top="50%" color={COLORS.purple} label="Tempo" value={formatDuration(activeElapsed)}
-              detail={<>Início {new Date(activeSession.start_time).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}</>} />
-            <StackCard top="75%" color={COLORS.teal} label="KM rodados hoje" value={currentKm.toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' km'}
-              detail={<>Odômetro inicial {Number(todayDay?.odometer_start || 0).toLocaleString('pt-BR')}</>} />
-          </div>
-        ) : (
-          <div className="relative min-h-0 flex-1">
-            <StackLink top="0%" color={COLORS.cream} to="/historico" label="Última jornada"
-              value={lastDay ? formatCurrency(Number(lastDay.total_earned) || 0) : 'Sem registros'}
-              detail={lastDay ? <>{lastDay.total_deliveries ?? 0} entregas · {lastKm.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} km</> : <>Sua próxima jornada aparecerá aqui</>} dark />
-            <StackLink top="25%" color={COLORS.coral} to="/historico" label="Histórico" value="Ver jornadas"
-              detail={<>Ganhos, entregas e desempenho por período</>} />
-            <StackLink top="50%" color={COLORS.green} to="/historico" label="Este mês" value={formatCurrency(monthMetrics.totalEarned)}
-              detail={<>iFood {formatCurrency(monthMetrics.totalIfood)} · Uber {formatCurrency(monthMetrics.totalUber)}<br/>{monthMetrics.totalDeliveries} entregas · {monthMetrics.totalHours.toFixed(1)}h</>} dark />
-            <StackLink top="75%" color={COLORS.teal} to="/historico" label="KM rodados no mês"
-              value={monthMetrics.totalDistance.toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' km'}
-              detail={<>Abrir detalhes do período</>} />
-          </div>
-        )}
-
-        <Link
-          to="/jornadas"
-          className="mt-3 flex h-14 shrink-0 items-center justify-center rounded-[22px] bg-white text-sm font-bold uppercase tracking-[0.12em] text-black transition active:scale-[0.99]"
-        >
-          {isActive ? 'Gerenciar jornada' : 'Iniciar jornada'}
-        </Link>
-      </div>
-    </main>
-  )
+      <Link to="/jornadas" className="mt-2 flex h-[52px] shrink-0 items-center justify-center rounded-[18px] bg-[#f7f7f5] text-[13px] font-black text-[#111] max-[700px]:h-12">
+        {active ? 'ENCERRAR JORNADA' : 'INICIAR JORNADA'}
+      </Link>
+    </div>
+  </main>
 }
 
-function StackCard({ top, color, label, value, detail }: { top: string; color: string; label: string; value: string; detail: React.ReactNode }) {
-  return (
-    <section className="absolute left-0 h-[43%] w-full rounded-[28px] p-5 shadow-[0_-8px_24px_rgba(0,0,0,.16)]" style={{ top, background: color }}>
-      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-black/55">{label}</p>
-      <p className="mt-1 text-[32px] font-black leading-none tracking-[-0.04em] text-black">{value}</p>
-      <div className="mt-3 text-[11px] font-semibold leading-5 text-black/65">{detail}</div>
-    </section>
-  )
+function Card({cls,color,label,value,detail,split,dark=false}:{cls:string;color:string;label:string;value:string;detail:string;split?:React.ReactNode;dark?:boolean}) {
+  const fg=dark?'#14160e':'#fff'
+  return <article className={`absolute left-0 right-0 h-[31%] min-h-[150px] max-h-[190px] overflow-hidden rounded-[28px] border border-white/10 px-[22px] py-[21px] shadow-[0_-11px_27px_#0005] max-[700px]:min-h-[138px] max-[700px]:px-5 max-[700px]:py-[18px] ${cls}`} style={{background:color,color:fg}}>
+    <small className="text-[9px] font-black tracking-[.14em]">{label}</small>
+    <strong className="mt-[10px] block text-[clamp(36px,11vw,44px)] font-black leading-none tracking-[-.045em]">{value}</strong>
+    <p className="mt-[6px] text-[11px] font-semibold opacity-[.67]">{detail}</p>
+    {split&&<div className="mt-[14px] flex justify-between gap-[10px] border-t border-white/30 pt-[11px] text-[10px] font-bold">{split}</div>}
+  </article>
 }
 
-function StackLink({ top, color, to, label, value, detail, dark = false }: { top: string; color: string; to: '/historico'; label: string; value: string; detail: React.ReactNode; dark?: boolean }) {
-  const text = dark ? 'text-black' : 'text-white'
-  const muted = dark ? 'text-black/55' : 'text-white/65'
-  return (
-    <Link to={to} className="absolute left-0 block h-[43%] w-full rounded-[28px] p-5 shadow-[0_-8px_24px_rgba(0,0,0,.16)] transition active:scale-[0.995]" style={{ top, background: color }}>
-      <p className={`text-[10px] font-bold uppercase tracking-[0.2em] ${muted}`}>{label}</p>
-      <p className={`mt-1 text-[30px] font-black leading-none tracking-[-0.04em] ${text}`}>{value}</p>
-      <div className={`mt-3 text-[11px] font-semibold leading-5 ${muted}`}>{detail}</div>
-    </Link>
-  )
+function CardLink({cls,color,to,label,value,detail,dark=false}:{cls:string;color:string;to:'/historico';label:string;value:string;detail:string;dark?:boolean}) {
+  const fg=dark?'#14160e':'#fff'
+  return <Link to={to} className={`absolute left-0 right-0 block h-[31%] min-h-[150px] max-h-[190px] overflow-hidden rounded-[28px] border border-white/10 px-[22px] py-[21px] shadow-[0_-11px_27px_#0005] max-[700px]:min-h-[138px] max-[700px]:px-5 max-[700px]:py-[18px] ${cls}`} style={{background:color,color:fg}}>
+    <small className="text-[9px] font-black tracking-[.14em]">{label}</small>
+    <strong className="mt-[10px] block text-[clamp(36px,11vw,44px)] font-black leading-none tracking-[-.045em]">{value}</strong>
+    <p className="mt-[6px] text-[11px] font-semibold opacity-[.67]">{detail}</p>
+  </Link>
 }
