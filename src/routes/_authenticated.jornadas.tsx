@@ -217,13 +217,20 @@ function JornadasPage() {
 
     setEnding(true)
     try {
-      const { error } = await supabase
+      const { data: endedSession, error } = await supabase
         .from('sessions')
         .update({ end_time: new Date().toISOString(), status: 'completed' })
         .eq('id', activeJourney.id)
         .eq('status', 'active')
+        .select('id')
+        .maybeSingle()
 
       if (error) throw error
+      if (!endedSession) {
+        toast.error('A jornada já foi alterada em outro lugar. Atualizando os dados.')
+        await loadJourneys()
+        return
+      }
 
       toast.success('Jornada encerrada com sucesso.')
       await loadJourneys()
@@ -293,7 +300,7 @@ function JornadasPage() {
       const ifoodValue = fromCents(toCents(ifood))
       const totalEarned = fromCents(toCents(uber) + toCents(ifood))
 
-      const { error } = await supabase
+      const { data: closedDay, error } = await supabase
         .from('work_days')
         .update({
           odometer_end: finalOdometer,
@@ -306,8 +313,15 @@ function JornadasPage() {
         })
         .eq('id', day.id)
         .eq('status', 'in_progress')
+        .select('id')
+        .maybeSingle()
 
       if (error) throw error
+      if (!closedDay) {
+        toast.error('O dia já foi alterado em outro lugar. Atualizando os dados.')
+        await loadJourneys()
+        return
+      }
 
       toast.success('Dia fechado com sucesso.')
       setShowCloseForm(false)
@@ -332,13 +346,21 @@ function JornadasPage() {
 
     setDeletingId(journey.id)
     try {
-      const { error } = await supabase
+      const { data: deletedSession, error } = await supabase
         .from('sessions')
         .delete()
         .eq('id', journey.id)
         .eq('status', 'completed')
+        .select('id')
+        .maybeSingle()
 
       if (error) throw error
+      if (!deletedSession) {
+        toast.error('A jornada já foi alterada em outro lugar. Atualizando os dados.')
+        setConfirmDeleteId(null)
+        await loadJourneys()
+        return
+      }
 
       toast.success('Jornada excluída com sucesso.')
       setConfirmDeleteId(null)
