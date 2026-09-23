@@ -124,12 +124,12 @@ function RootComponent() {
   const router = useRouter();
   const pathname = router.state.location.pathname;
   const isPublicRoute = pathname === '/' || pathname === '/auth' || pathname.startsWith('/api');
-  const isDashboard = pathname === '/dashboard';
+  const isNewInternalLayout = pathname === '/dashboard' || pathname === '/historico' || pathname === '/jornadas' || pathname === '/desempenho';
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div className={cn("min-h-screen bg-background transition-colors duration-500", !isPublicRoute && !isDashboard && "md:pl-64")}>
-        {!isPublicRoute && !isDashboard && <Sidebar />}
+      <div className={cn("min-h-screen bg-background transition-colors duration-500", !isPublicRoute && !isNewInternalLayout && "md:pl-64")}>
+        {!isPublicRoute && !isNewInternalLayout && <Sidebar />}
         <main className="relative z-10">
           <Outlet />
         </main>
