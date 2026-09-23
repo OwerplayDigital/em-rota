@@ -36,7 +36,7 @@ import {
   getChartData,
   formatCurrency,
   formatDuration,
-  formatDateBR,
+  getLocalDateString,
 } from '@/lib/dashboard-utils'
 import { toCents, fromCents } from '@/lib/money'
 
@@ -70,10 +70,7 @@ function DashboardPage() {
   const extraEarned = Math.max(0, fromCents(toCents(metrics.totalEarned) - toCents(metrics.totalUber) - toCents(metrics.totalIfood)))
 
   // Status da jornada (baseado em dados de hoje)
-  const todayStr = useMemo(() => {
-    const [y, m, d] = formatDateBR(new Date().toISOString().split('T')[0] as string).split('/')
-    return `${y}-${m}-${d}`
-  }, [])
+  const todayStr = useMemo(() => getLocalDateString(), [])
   const todayWorkDay = data.workDays.find((wd: any) => wd.date === todayStr)
   const hasActiveSession = data.sessions.some((s: any) => s.status === 'active') || todayWorkDay?.status === 'in_progress'
 
