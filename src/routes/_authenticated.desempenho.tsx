@@ -82,15 +82,27 @@ function PerformancePage() {
     let maxEarned = 0
     let maxDeliveries = 0
     let bestPerHour = 0
+    let maxEarnedDate = ''
+    let maxDeliveriesDate = ''
+    let bestPerHourDate = ''
 
     data.workDays.forEach(wd => {
       const earnedCents = toCents(wd.total_earned)
-      maxEarned = Math.max(maxEarned, earnedCents)
-      maxDeliveries = Math.max(maxDeliveries, wd.total_deliveries || 0)
+      if (earnedCents > maxEarned) {
+        maxEarned = earnedCents
+        maxEarnedDate = wd.date
+      }
+      if ((wd.total_deliveries || 0) > maxDeliveries) {
+        maxDeliveries = wd.total_deliveries || 0
+        maxDeliveriesDate = wd.date
+      }
       const daySessions = data.sessions.filter(s => s.work_day_id === wd.id)
       const dayMetrics = calculateMetrics([wd], daySessions)
       if (dayMetrics.totalHours >= 0.5) {
-        bestPerHour = Math.max(bestPerHour, dayMetrics.avgPerHour)
+        if (dayMetrics.avgPerHour > bestPerHour) {
+          bestPerHour = dayMetrics.avgPerHour
+          bestPerHourDate = wd.date
+        }
       }
     })
 
@@ -98,6 +110,9 @@ function PerformancePage() {
       maxEarned: fromCents(maxEarned),
       maxDeliveries,
       bestPerHour,
+      maxEarnedDate,
+      maxDeliveriesDate,
+      bestPerHourDate,
     }
   }, [data])
 
@@ -136,14 +151,14 @@ function PerformancePage() {
 
         {/* Grid de Métricas */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          <MetricCard icon={Gauge} label="KM rodados" value={metrics.totalDistance > 0 ? `${metrics.totalDistance.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} km` : '—'} />
+          <MetricCard icon={Clock} label="Horas trabalhadas" value={metrics.totalMs > 0 ? formatDuration(metrics.totalMs) : '—'} />
           <MetricCard icon={Wallet} label="Ganhos médios/dia" value={formatCurrency(fromCents(Math.round(toCents(metrics.totalEarned) / avgDays)))} />
           <MetricCard icon={TrendingUp} label="Ganhos por hora" value={metrics.avgPerHour > 0 ? `${formatCurrency(metrics.avgPerHour)}/h` : '—'} />
           <MetricCard icon={Gauge} label="Ganhos por km" value={metrics.avgPerKm > 0 ? `${formatCurrency(metrics.avgPerKm)}/km` : '—'} />
           <MetricCard icon={Zap} label="Entregas por hora" value={metrics.deliveriesPerHour > 0 ? metrics.deliveriesPerHour.toFixed(1) : '—'} />
           <MetricCard icon={Package} label="Média entregas/dia" value={filtered.workDays.length > 0 ? (metrics.totalDeliveries / avgDays).toFixed(1) : '—'} />
           <MetricCard icon={Clock} label="Tempo médio" value={metrics.totalMs > 0 ? formatDuration(metrics.totalMs / avgDays) : '—'} />
-          <MetricCard icon={Gauge} label="KM rodados" value={metrics.totalDistance > 0 ? `${metrics.totalDistance.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} km` : '—'} />
-          <MetricCard icon={Clock} label="Horas trabalhadas" value={metrics.totalMs > 0 ? formatDuration(metrics.totalMs) : '—'} />
         </div>
 
         {/* Comparativo de Plataformas */}
@@ -188,21 +203,24 @@ function PerformancePage() {
               emoji="🏆"
               label="Maior ganho em um dia"
               value={records.maxEarned > 0 ? formatCurrency(records.maxEarned) : '—'}
+              date={records.maxEarnedDate}
             />
             <RecordRow
               emoji="⚡"
               label="Melhor média R$/hora"
               value={records.bestPerHour > 0 ? `${formatCurrency(records.bestPerHour)}/h` : '—'}
+              date={records.bestPerHourDate}
             />
             <RecordRow
               emoji="📦"
               label="Mais entregas em uma jornada"
               value={records.maxDeliveries > 0 ? records.maxDeliveries.toString() : '—'}
+              date={records.maxDeliveriesDate}
             />
           </div>
         </div>
       </motion.div>
-    </div>
+    </button>
   )
 }
 
@@ -246,14 +264,21 @@ function PlatformCompareRow({ label, dotColor, rowClassName, pct, total, avgPerD
   )
 }
 
-function RecordRow({ emoji, label, value }: { emoji: string; label: string; value: string }) {
+function RecordRow({ emoji, label, value, date }: { emoji: string; label: string; value: string; date: string }) {
+  const openRecordDay = () => {
+    if (!date) return
+    const currentMonth = getLocalDateString().slice(0, 7)
+    const periodo = date.slice(0, 7) === currentMonth ? 'mes' : 'todos'
+    window.location.href = `/historico?periodo=${periodo}&dia=${date}`
+  }
+
   return (
-    <div className="flex items-center justify-between rounded-[18px] border border-white/15 bg-black/10 px-4 py-3">
+    <button type="button" onClick={openRecordDay} disabled={!date} className="w-full flex items-center justify-between rounded-[18px] border border-white/15 bg-black/10 px-4 py-3 text-left transition active:scale-[0.99] disabled:cursor-default">
       <div className="flex items-center gap-3 min-w-0">
         <span className="text-base leading-none">{emoji}</span>
         <span className="text-xs font-medium text-white/65">{label}</span>
       </div>
       <span className="text-sm font-bold text-white shrink-0">{value}</span>
-    </div>
+    </button>
   )
 }
