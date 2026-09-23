@@ -161,11 +161,11 @@ function PerformancePage() {
           {/* Barra proporcional */}
           <div className="h-2.5 w-full rounded-full bg-white/10 overflow-hidden flex">
             <div
-              className="h-full bg-[#EA1D2C] transition-all duration-500"
+              className="h-full bg-white/55 transition-all duration-500"
               style={{ width: `${platform.ifoodPct}%` }}
             />
             <div
-              className="h-full bg-[#000000] transition-all duration-500"
+              className="h-full bg-white/20 transition-all duration-500"
               style={{ width: `${platform.uberPct}%` }}
             />
           </div>
@@ -173,14 +173,14 @@ function PerformancePage() {
           <div className="space-y-2">
             <PlatformCompareRow
               label="iFood"
-              dotColor="bg-[#EA1D2C]"
+              dotColor="bg-white" rowClassName="bg-[#EA1D2C]"
               pct={platform.ifoodPct}
               total={platform.ifood}
               avgPerDelivery={metrics.totalDeliveries > 0 ? fromCents(Math.round(toCents(platform.ifood) / metrics.totalDeliveries)) : 0}
             />
             <PlatformCompareRow
               label="Uber"
-              dotColor="bg-black ring-1 ring-white/25"
+              dotColor="bg-white" rowClassName="bg-black"
               pct={platform.uberPct}
               total={platform.uber}
               avgPerDelivery={metrics.totalDeliveries > 0 ? fromCents(Math.round(toCents(platform.uber) / metrics.totalDeliveries)) : 0}
@@ -189,7 +189,7 @@ function PerformancePage() {
         </div>
 
         {/* Recordes Pessoais */}
-        <div className="rounded-[28px] border border-white/10 bg-[#F06A4F] p-5 md:p-6 text-white space-y-4">
+        <div className="rounded-[28px] border border-white/10 bg-[#24262B] p-5 md:p-6 text-white space-y-4">
           <div className="flex items-center gap-2">
             <Trophy className="w-4 h-4 text-white" />
             <h3 className="text-[10px] font-black text-white/70 uppercase tracking-[0.2em]">
@@ -235,15 +235,16 @@ function MetricCard({ icon: Icon, label, value }: { icon: any; label: string; va
   )
 }
 
-function PlatformCompareRow({ label, dotColor, pct, total, avgPerDelivery }: {
+function PlatformCompareRow({ label, dotColor, rowClassName, pct, total, avgPerDelivery }: {
   label: string
   dotColor: string
+  rowClassName: string
   pct: number
   total: number
   avgPerDelivery: number
 }) {
   return (
-    <div className="flex items-center justify-between rounded-[18px] border border-white/10 bg-black/10 px-4 py-3">
+    <div className={cn("flex items-center justify-between rounded-[18px] border border-white/10 px-4 py-3", rowClassName)}>
       <div className="flex items-center gap-2.5 min-w-0">
         <div className={cn("w-2.5 h-2.5 rounded-full shrink-0", dotColor)} />
         <div className="min-w-0">
