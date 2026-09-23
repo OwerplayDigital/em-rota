@@ -17,6 +17,7 @@ import { supabase } from '@/integrations/supabase/client'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { fromCents, toCents } from '@/lib/money'
+import { getLocalDateString } from '@/lib/dashboard-utils'
 
 export const Route = createFileRoute('/_authenticated/jornadas')({ component: JornadasPage })
 
@@ -42,17 +43,7 @@ type Journey = {
 }
 
 function localDate() {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/Sao_Paulo',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(new Date())
-
-  const year = parts.find((part) => part.type === 'year')?.value
-  const month = parts.find((part) => part.type === 'month')?.value
-  const day = parts.find((part) => part.type === 'day')?.value
-  return `${year}-${month}-${day}`
+  return getLocalDateString()
 }
 
 function parseNumberBR(value: string) {
@@ -187,6 +178,19 @@ function JornadasPage() {
       }
 
       if (!workDayId) throw new Error('Dia de trabalho não encontrado')
+
+      const { data: activeSession } = await supabase
+        .from('sessions')
+        .select('id')
+        .eq('status', 'active')
+        .limit(1)
+        .maybeSingle()
+
+      if (activeSession) {
+        toast.error('Já existe uma jornada em andamento.')
+        await loadJourneys()
+        return
+      }
 
       const { error: sessionError } = await supabase
         .from('sessions')
