@@ -37,14 +37,14 @@ function DashboardPage() {
       <section className="relative mt-2 min-h-0 flex-1 max-[700px]:mt-1">
         {active ? <>
           <Card cls="top-0 z-[1]" color={C.green} dark label="GANHOS" value={formatCurrency(earned)}
-            detail={goal>0 ? `${pct}% da meta de ${formatCurrency(goal)}` : `iFood ${formatCurrency(Number(day.ifood_earned)||0)} · Uber ${formatCurrency(Number(day.uber_earned)||0)}`} />
-          <Card cls="top-[22%] z-[2]" color={C.coral} label="ENTREGAS" value={String(day.total_deliveries||0)}
-            detail={`${day.ifood_deliveries||0} iFood + ${day.uber_deliveries||0} Uber`} />
+            detail={goal>0 ? `${pct}% da meta de ${formatCurrency(goal)}` : `iFood ${formatCurrency(Number(day!.ifood_earned)||0)} · Uber ${formatCurrency(Number(day!.uber_earned)||0)}`} />
+          <Card cls="top-[22%] z-[2]" color={C.coral} label="ENTREGAS" value={String(day!.total_deliveries||0)}
+            detail={`${day!.ifood_deliveries||0} iFood + ${day!.uber_deliveries||0} Uber`} />
           <Card cls="top-[44%] z-[3]" color={C.purple} label="TEMPO" value={formatDuration(elapsed)}
-            detail={`jornada iniciada às ${new Date(session.start_time).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'})}`} />
+            detail={`jornada iniciada às ${new Date(session!.start_time).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Sao_Paulo'})}`} />
           <Card cls="top-[66%] z-[4]" color={C.teal} label="KM RODADOS HOJE" value={`${km.toLocaleString('pt-BR',{maximumFractionDigits:1})} km`}
-            detail={`odômetro inicial ${Number(day.odometer_start||0).toLocaleString('pt-BR')} km`}
-            split={<><span>Distância da jornada</span><span>{day.odometer_end != null ? `Atual ${Number(day.odometer_end).toLocaleString('pt-BR')} km` : 'Aguardando atualização'}</span></>} />
+            detail={`odômetro inicial ${Number(day!.odometer_start||0).toLocaleString('pt-BR')} km`}
+            split={<><span>Distância da jornada</span><span>{day!.odometer_end != null ? `Atual ${Number(day!.odometer_end).toLocaleString('pt-BR')} km` : 'Aguardando atualização'}</span></>} />
         </> : <>
           <CardLink cls="top-0 z-[1]" color={C.green} to="/jornadas" dark label="ÚLTIMA JORNADA"
             value={last ? formatCurrency(Number(last.total_earned)||0) : 'R$ 0,00'}
