@@ -58,6 +58,7 @@ export type Database = {
           daily_goal: number | null
           date: string
           id: string
+          ifood_deliveries: number
           ifood_earned: number | null
           notes: string | null
           odometer_end: number | null
@@ -65,6 +66,7 @@ export type Database = {
           status: Database["public"]["Enums"]["work_day_status"]
           total_deliveries: number | null
           total_earned: number | null
+          uber_deliveries: number
           uber_earned: number | null
           updated_at: string | null
         }
@@ -73,6 +75,7 @@ export type Database = {
           daily_goal?: number | null
           date: string
           id?: string
+          ifood_deliveries?: number
           ifood_earned?: number | null
           notes?: string | null
           odometer_end?: number | null
@@ -80,6 +83,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["work_day_status"]
           total_deliveries?: number | null
           total_earned?: number | null
+          uber_deliveries?: number
           uber_earned?: number | null
           updated_at?: string | null
         }
@@ -88,6 +92,7 @@ export type Database = {
           daily_goal?: number | null
           date?: string
           id?: string
+          ifood_deliveries?: number
           ifood_earned?: number | null
           notes?: string | null
           odometer_end?: number | null
@@ -95,6 +100,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["work_day_status"]
           total_deliveries?: number | null
           total_earned?: number | null
+          uber_deliveries?: number
           uber_earned?: number | null
           updated_at?: string | null
         }
