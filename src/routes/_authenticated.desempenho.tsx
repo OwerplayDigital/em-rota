@@ -29,7 +29,7 @@ const PERIODS = [
 function periodStart(period: string): string {
   const localToday = getLocalDateString()
   const [year, month, day] = localToday.split('-').map(Number)
-  const now = new Date(year, month - 1, day)
+  const now = new Date(year!, month! - 1, day!)
   const d = new Date(now)
   if (period === '7d') d.setDate(now.getDate() - 6)
   else if (period === '30d') d.setDate(now.getDate() - 29)
