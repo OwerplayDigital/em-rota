@@ -32,7 +32,7 @@ type FilterId = (typeof FILTERS)[number]['id']
 function localTodayParts() {
   const today = getLocalDateString()
   const [year, month, day] = today.split('-').map(Number)
-  return { today, date: new Date(year, month - 1, day) }
+  return { today, date: new Date(year!, month! - 1, day!) }
 }
 
 function todayStrBR() {
@@ -61,7 +61,7 @@ function dateRangeForFilter(filter: FilterId) {
     default: {
       const firstDayCurrentMonth = startOfMonthBR()
       const [year, month] = firstDayCurrentMonth.split('-').map(Number)
-      const previousMonthEnd = new Date(year, month - 1, 0)
+      const previousMonthEnd = new Date(year!, month! - 1, 0)
       const y = previousMonthEnd.getFullYear()
       const m = String(previousMonthEnd.getMonth() + 1).padStart(2, '0')
       const d = String(previousMonthEnd.getDate()).padStart(2, '0')
