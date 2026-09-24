@@ -145,8 +145,7 @@ export const handleTelegramUpdate = async (body: any) => {
   const mainMenu = {
     keyboard: [
       [{ text: 'INICIAR JORNADA' }, { text: 'ENCERRAR JORNADA' }],
-      [{ text: 'RESUMO' }, { text: 'FECHAR DIA' }],
-      [{ text: 'CORRIGIR DIA' }, { text: 'LIMPAR CHAT' }]
+      [{ text: 'FECHAR DIA' }, { text: 'CORRIGIR DIA' }]
     ],
     resize_keyboard: true
   };
@@ -155,8 +154,7 @@ export const handleTelegramUpdate = async (body: any) => {
     keyboard: [
       [{ text: 'LANÇAR IFOOD' }, { text: 'LANÇAR UBER' }],
       [{ text: 'ATUALIZAR KM' }],
-      [{ text: 'RESUMO' }, { text: 'ENCERRAR JORNADA' }],
-      [{ text: 'CANCELAR JORNADA' }, { text: 'LIMPAR CHAT' }]
+      [{ text: 'ENCERRAR JORNADA' }, { text: 'CANCELAR JORNADA' }]
     ],
     resize_keyboard: true
   };
@@ -220,7 +218,7 @@ export const handleTelegramUpdate = async (body: any) => {
       await send('Não foi possível preparar o lançamento. Tente novamente.', activeJourneyMenu);
       return;
     }
-    await send(`Quanto deseja acrescentar ao ${platform === 'IFOOD' ? 'iFood' : 'Uber'}?\nExemplo: 18,50`, cancelMenu);
+    await send(`${platform === 'IFOOD' ? 'iFood' : 'Uber'}:`, cancelMenu);
     return;
   }
 
@@ -235,7 +233,7 @@ export const handleTelegramUpdate = async (body: any) => {
       await send('Não foi possível preparar a atualização. Tente novamente.', activeJourneyMenu);
       return;
     }
-    await send(`Qual é o odômetro atual?\nInicial: <b>${formatNumberBR(activeDay.odometer_start)} km</b>`, cancelMenu);
+    await send('Odômetro atual:', cancelMenu);
     return;
   }
 
