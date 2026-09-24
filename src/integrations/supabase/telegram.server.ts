@@ -242,7 +242,7 @@ export const handleTelegramUpdate = async (body: any) => {
       await send('Nenhum dado para hoje.', mainMenu);
     } else {
       const summary = await getSummary(activeDay);
-      await send(summary, activeDay.status === 'completed' ? { keyboard: [[{ text: 'CORRIGIR DIA' }, { text: 'EXCLUIR JORNADA' }], [{ text: 'LIMPAR CHAT' }], [{ text: 'MENU' }]], resize_keyboard: true } : (activeSession ? activeJourneyMenu : mainMenu));
+      await send(summary, activeDay.status === 'completed' ? { keyboard: [[{ text: 'CORRIGIR DIA' }, { text: 'EXCLUIR JORNADA' }], [{ text: 'MENU' }]], resize_keyboard: true } : (activeSession ? activeJourneyMenu : mainMenu));
     }
     return;
   }
@@ -271,7 +271,7 @@ export const handleTelegramUpdate = async (body: any) => {
   if (textInput === 'INICIAR JORNADA') {
     if (activeDay?.status === 'completed') {
       await send('⚠️ O dia já foi fechado.\n\nPara continuar registrando, use:\n<b>CORRIGIR DIA → REABRIR DIA</b>', {
-        keyboard: [[{ text: 'CORRIGIR DIA' }, { text: 'RESUMO' }], [{ text: 'MENU' }]],
+        keyboard: [[{ text: 'CORRIGIR DIA' }], [{ text: 'MENU' }]],
         resize_keyboard: true
       });
       return;
@@ -348,7 +348,7 @@ export const handleTelegramUpdate = async (body: any) => {
     }
 
     await send('<b>JORNADA CANCELADA</b>\n\nA jornada foi removida do registro. Nenhum tempo foi contabilizado.', {
-      keyboard: [[{ text: 'INICIAR JORNADA' }, { text: 'RESUMO' }], [{ text: 'MENU' }]],
+      keyboard: [[{ text: 'INICIAR JORNADA' }], [{ text: 'MENU' }]],
       resize_keyboard: true
     });
     return;
@@ -356,7 +356,7 @@ export const handleTelegramUpdate = async (body: any) => {
 
   if (textInput === 'NÃO, VOLTAR') {
     await send('Operação cancelada. A jornada continua em andamento.', {
-      keyboard: [[{ text: 'ENCERRAR JORNADA' }, { text: 'CANCELAR JORNADA' }], [{ text: 'RESUMO' }], [{ text: 'MENU' }]],
+      keyboard: [[{ text: 'ENCERRAR JORNADA' }, { text: 'CANCELAR JORNADA' }], [{ text: 'MENU' }]],
       resize_keyboard: true
     });
     return;
@@ -401,7 +401,7 @@ export const handleTelegramUpdate = async (body: any) => {
       `${earnedCents < goalCents ? `Faltam: ${formatCurrency(fromCents(goalCents - earnedCents))}` : 'Meta Atingida'}` : '';
 
     await send(`<b>JORNADA ENCERRADA</b>\n\nDuração desta jornada: ${formatDuration(thisSessionMs)}\n\n<b>TOTAL DE ${formatDateBR(day.date)}:</b>\nTempo na rua: ${formatDuration(totalMs)}\nGanhos: ${formatCurrency(day.total_earned)}\nEntregas: ${day.total_deliveries ?? 'Ainda não informado'}${goalStr}`, {
-      keyboard: [[{ text: 'INICIAR JORNADA' }, { text: 'FECHAR DIA' }], [{ text: 'EXCLUIR JORNADA' }, { text: 'RESUMO' }], [{ text: 'LIMPAR CHAT' }], [{ text: 'MENU' }]],
+      keyboard: [[{ text: 'INICIAR JORNADA' }, { text: 'FECHAR DIA' }], [{ text: 'EXCLUIR JORNADA' }], [{ text: 'MENU' }]],
       resize_keyboard: true
     });
     return;
@@ -420,7 +420,7 @@ export const handleTelegramUpdate = async (body: any) => {
       return;
     }
     if (activeDay.status === 'completed') {
-      await send('O dia de hoje já está fechado.', { keyboard: [[{ text: 'CORRIGIR DIA' }, { text: 'RESUMO' }], [{ text: 'MENU' }]], resize_keyboard: true });
+      await send('O dia de hoje já está fechado.', { keyboard: [[{ text: 'CORRIGIR DIA' }], [{ text: 'MENU' }]], resize_keyboard: true });
       return;
     }
     await (supabaseAdmin.from('work_days').update({ notes: 'AWAITING:CLOSE_ODO' }).eq('id', activeDay.id) as any);
@@ -461,7 +461,7 @@ export const handleTelegramUpdate = async (body: any) => {
     await send(
       `<b>DIA FECHADO</b>\n\niFood: ${formatCurrency(closedDay.ifood_earned)} · ${closedDay.ifood_deliveries ?? 0} entrega(s)\nUber: ${formatCurrency(closedDay.uber_earned)} · ${closedDay.uber_deliveries ?? 0} entrega(s)\n<b>Total: ${formatCurrency(closedDay.total_earned)} · ${closedDay.total_deliveries ?? 0} entrega(s)</b>`,
       {
-        keyboard: [[{ text: 'CORRIGIR DIA' }, { text: 'RESUMO' }], [{ text: 'LIMPAR CHAT' }], [{ text: 'MENU' }]],
+        keyboard: [[{ text: 'CORRIGIR DIA' }], [{ text: 'MENU' }]],
         resize_keyboard: true
       }
     );
@@ -591,7 +591,7 @@ export const handleTelegramUpdate = async (body: any) => {
     }
     await (supabaseAdmin.from('work_days').update({ notes: null }).eq('id', activeDay.id) as any);
     const updatedDay = await getActiveWorkDay();
-    await send('<b>JORNADA EXCLUÍDA</b>\n\nA jornada foi removida dos registros e não será contabilizada no tempo trabalhado.', { keyboard: [[{ text: 'EXCLUIR JORNADA' }, { text: 'CORRIGIR DIA' }], [{ text: 'RESUMO' }], [{ text: 'MENU' }]], resize_keyboard: true });
+    await send('<b>JORNADA EXCLUÍDA</b>\n\nA jornada foi removida dos registros e não será contabilizada no tempo trabalhado.', { keyboard: [[{ text: 'EXCLUIR JORNADA' }, { text: 'CORRIGIR DIA' }], [{ text: 'MENU' }]], resize_keyboard: true });
     await send(await getSummary(updatedDay));
     return;
   }
@@ -896,7 +896,7 @@ export const handleTelegramUpdate = async (body: any) => {
     const res = await (supabaseAdmin.from('work_days').update(update).eq('id', activeDay.id).select().single() as any);
     const summary = await getSummary(res.data);
     await send('CORREÇÃO REALIZADA', {
-      keyboard: [[{ text: 'CORRIGIR DIA' }, { text: 'LIMPAR CHAT' }, { text: 'RESUMO' }], [{ text: 'MENU' }]],
+      keyboard: [[{ text: 'CORRIGIR DIA' }], [{ text: 'MENU' }]],
       resize_keyboard: true
     });
     await send(summary);
@@ -919,7 +919,7 @@ export const handleTelegramUpdate = async (body: any) => {
       if (!day) return;
       await (supabaseAdmin.from('sessions').insert({ work_day_id: day.id, status: 'active' as any }) as any);
       await send('Jornada iniciada!', {
-        keyboard: [[{ text: 'ENCERRAR JORNADA' }, { text: 'RESUMO' }]],
+        keyboard: [[{ text: 'ENCERRAR JORNADA' }]],
         resize_keyboard: true
       });
       return;
@@ -1006,7 +1006,7 @@ export const handleTelegramUpdate = async (body: any) => {
       }).eq('id', activeDay.id).select().single() as any);
       const summary = `Jornada encerrada! iFood: ${formatCurrency(res.data.ifood_earned)} | Uber: ${formatCurrency(res.data.uber_earned)} | Total: ${formatCurrency(res.data.total_earned)}`;
       await send(summary, {
-        keyboard: [[{ text: 'CORRIGIR DIA' }, { text: 'LIMPAR CHAT' }, { text: 'RESUMO' }], [{ text: 'MENU' }]],
+        keyboard: [[{ text: 'CORRIGIR DIA' }], [{ text: 'MENU' }]],
         resize_keyboard: true
       });
       return;
@@ -1035,7 +1035,7 @@ export const handleTelegramUpdate = async (body: any) => {
       const res = await (supabaseAdmin.from('work_days').update({ total_deliveries: Math.round(num), status: 'completed' as any }).eq('id', activeDay.id).select().single() as any);
       const summary = await getSummary(res.data);
       await send(`<b>DIA ${formatDateBR(res.data.date)} FECHADO</b>\n\n${summary}`, {
-        keyboard: [[{ text: 'CORRIGIR DIA' }, { text: 'RESUMO' }], [{ text: 'MENU' }]],
+        keyboard: [[{ text: 'CORRIGIR DIA' }], [{ text: 'MENU' }]],
         resize_keyboard: true
       });
       return;
