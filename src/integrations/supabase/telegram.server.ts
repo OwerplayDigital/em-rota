@@ -195,7 +195,7 @@ export const handleTelegramUpdate = async (body: any) => {
     let statusMsg = activeSession ? '🏃 Jornada em andamento.' : '⏸️ Nenhuma jornada ativa.';
     if (activeDay?.status === 'completed') statusMsg = '🏁 Dia fechado.';
     
-    await send(`<b>EM ROTA</b>\n\n${statusMsg}`, mainMenu);
+    await send(`<b>EM ROTA</b>\n\n${statusMsg}`, activeSession ? activeJourneyMenu : mainMenu);
     return;
   }
 
