@@ -652,7 +652,398 @@ export const handleTelegramUpdate = async (body: any) => {
 
   // Input Handling (Numeric/Prices/Times)
   const isTimeInput = /^\d{1,2}:\d{2}$/.test(textInput);
-  const rawVal = textInput.replace('R$', '').replace(/\s/g, '').replace(',', '.').trim();
+  const rawInput = textInput.replace('R
+
+  if (activeDay?.notes?.startsWith('LIVE:EARNED:')) {
+    if (!activeSession) {
+      await (supabaseAdmin.from('work_days').update({ notes: null }).eq('id', activeDay.id) as any);
+      await send('A jornada não está mais ativa. Nenhum valor foi lançado.', mainMenu);
+      return;
+    }
+    if (isNaN(num) || num < 0) {
+      await send('⚠️ Valor inválido. Informe um valor positivo, por exemplo: 18,50', cancelMenu);
+      return;
+    }
+    const platform = activeDay.notes.split(':')[2];
+    const addCents = toCents(num);
+    const currentIfoodCents = toCents(activeDay.ifood_earned);
+    const currentUberCents = toCents(activeDay.uber_earned);
+    const nextIfoodCents = platform === 'IFOOD' ? currentIfoodCents + addCents : currentIfoodCents;
+    const nextUberCents = platform === 'UBER' ? currentUberCents + addCents : currentUberCents;
+    const nextIfoodDeliveries = (Number(activeDay.ifood_deliveries) || 0) + (platform === 'IFOOD' ? 1 : 0);
+    const nextUberDeliveries = (Number(activeDay.uber_deliveries) || 0) + (platform === 'UBER' ? 1 : 0);
+    const update = {
+      ifood_earned: fromCents(nextIfoodCents),
+      uber_earned: fromCents(nextUberCents),
+      total_earned: fromCents(nextIfoodCents + nextUberCents),
+      ifood_deliveries: nextIfoodDeliveries,
+      uber_deliveries: nextUberDeliveries,
+      total_deliveries: nextIfoodDeliveries + nextUberDeliveries,
+      notes: null
+    };
+    const { data, error } = await (supabaseAdmin.from('work_days').update(update).eq('id', activeDay.id).select().single() as any);
+    if (error || !data) {
+      console.error('Failed to add live earning:', error);
+      await send('Não foi possível registrar o ganho. Tente novamente.', activeJourneyMenu);
+      return;
+    }
+    await send(
+      `<b>ENTREGA REGISTRADA</b>\n\niFood: ${formatCurrency(data.ifood_earned)} · ${data.ifood_deliveries ?? 0} entrega(s)\nUber: ${formatCurrency(data.uber_earned)} · ${data.uber_deliveries ?? 0} entrega(s)\n<b>Total: ${formatCurrency(data.total_earned)} · ${data.total_deliveries ?? 0} entrega(s)</b>`,
+      activeJourneyMenu
+    );
+    return;
+  }
+
+  if (activeDay?.notes === 'LIVE:ODO') {
+    if (!activeSession) {
+      await (supabaseAdmin.from('work_days').update({ notes: null }).eq('id', activeDay.id) as any);
+      await send('A jornada não está mais ativa. O odômetro não foi alterado.', mainMenu);
+      return;
+    }
+    const startOdo = Number(activeDay.odometer_start) || 0;
+    if (isNaN(num) || num < startOdo) {
+      await send(`⚠️ O odômetro atual não pode ser menor que o inicial (${formatNumberBR(activeDay.odometer_start)} km).`, cancelMenu);
+      return;
+    }
+    const { error } = await (supabaseAdmin.from('work_days').update({ odometer_end: num, notes: null }).eq('id', activeDay.id) as any);
+    if (error) {
+      console.error('Failed to update live odometer:', error);
+      await send('Não foi possível atualizar o odômetro. Tente novamente.', activeJourneyMenu);
+      return;
+    }
+    await send(`Odômetro atualizado: <b>${formatNumberBR(num)} km</b>\nRodados até agora: <b>${formatNumberBR(num - startOdo)} km</b>`, activeJourneyMenu);
+    return;
+  }
+
+  if (activeDay?.notes?.startsWith('AWAITING:ODO_START_CONFIRM:')) {
+    const lastOdo = parseFloat(activeDay.notes.split(':')[2]);
+    let odoToUse = null;
+
+    if (textInput.startsWith('USAR ')) {
+      odoToUse = lastOdo;
+    } else if (textInput === 'OUTRO VALOR') {
+      await (supabaseAdmin.from('work_days').update({ notes: 'AWAITING:ODO_START_MANUAL' }).eq('id', activeDay.id) as any);
+      await send('Informe o odômetro inicial atual:', cancelMenu);
+      return;
+    } else if (!isNaN(num)) {
+      odoToUse = num;
+    }
+
+    if (odoToUse !== null) {
+      await (supabaseAdmin.from('work_days').update({ odometer_start: odoToUse, notes: null }).eq('id', activeDay.id) as any);
+      await (supabaseAdmin.from('sessions').insert({ work_day_id: activeDay.id, status: 'active' as any }) as any);
+      await send(`Jornada iniciada com odômetro <b>${formatNumberBR(odoToUse)} km</b>!`, activeJourneyMenu);
+      return;
+    }
+  }
+
+  if (activeDay?.notes === 'AWAITING:ODO_START_MANUAL' && !isNaN(num)) {
+    await (supabaseAdmin.from('work_days').update({ odometer_start: num, notes: null }).eq('id', activeDay.id) as any);
+    await (supabaseAdmin.from('sessions').insert({ work_day_id: activeDay.id, status: 'active' as any }) as any);
+    await send(`Jornada iniciada com odômetro <b>${formatNumberBR(num)} km</b>!`, {
+      ...activeJourneyMenu
+    });
+    return;
+  }
+
+  if (activeDay?.notes?.startsWith('CORRECT:SELECT_SESSION:')) {
+    const mode = activeDay.notes.split(':')[2]; // START_TIME or END_TIME
+    const sessionMatch = textInput.match(/JORNADA (\d+)/);
+    if (sessionMatch) {
+      const { data: sessions } = await (supabaseAdmin.from('sessions').select('*').eq('work_day_id', activeDay.id).order('start_time', { ascending: true }) as any);
+      const index = parseInt(sessionMatch[1]!) - 1;
+      const session = sessions?.[index];
+      if (session) {
+        await (supabaseAdmin.from('work_days').update({ notes: `CORRECT:${mode}:${session.id}` }).eq('id', activeDay.id) as any);
+        await send(`Qual o novo horário de ${mode === 'START_TIME' ? 'início' : 'encerramento'} para a Jornada ${index + 1}?\nExemplo: 09:30`, cancelMenu);
+        return;
+      }
+    }
+    await send('Selecione uma jornada válida.', cancelMenu);
+    return;
+  }
+
+  if (activeDay?.notes?.startsWith('ADDSESSION:')) {
+    const mode = activeDay.notes.split(':')[1];
+    if (mode === 'START_TIME') {
+      if (!isTimeInput) {
+        await send('⚠️ Formato de hora inválido. Use HH:MM (ex: 09:30).', cancelMenu);
+        return;
+      }
+      const [h = 0, m = 0] = textInput.split(':').map(Number);
+      if (h < 0 || h > 23 || m < 0 || m > 59) {
+        await send('⚠️ Hora ou minuto inválido.', cancelMenu);
+        return;
+      }
+      const newStart = new Date(today + 'T00:00:00Z');
+      newStart.setUTCHours(h + 3, m, 0, 0); // Convert local to UTC (assuming -3h)
+      
+      await (supabaseAdmin.from('work_days').update({ notes: `ADDSESSION:ODO_START:${newStart.toISOString()}` }).eq('id', activeDay.id) as any);
+      await send('Qual o odômetro inicial desta jornada?', cancelMenu);
+      return;
+    }
+    if (mode === 'ODO_START') {
+      const startTime = activeDay.notes.split(':')[2] + ':' + activeDay.notes.split(':')[3] + ':' + activeDay.notes.split(':')[4];
+      if (isNaN(num)) {
+        await send('⚠️ Valor inválido. Informe o odômetro inicial:', cancelMenu);
+        return;
+      }
+      
+      // Check for duplicates
+      const { data: existing } = await (supabaseAdmin.from('sessions').select('*').eq('work_day_id', activeDay.id).eq('start_time', startTime) as any);
+      if (existing && existing.length > 0) {
+        await (supabaseAdmin.from('work_days').update({ notes: null }).eq('id', activeDay.id) as any);
+        await send('⚠️ Já existe uma jornada registrada com este horário.', mainMenu);
+        return;
+      }
+
+      await (supabaseAdmin.from('sessions').insert({ 
+        work_day_id: activeDay.id, 
+        start_time: startTime,
+        status: 'completed' as any,
+        end_time: startTime // Default to start time, user can correct later
+      }) as any);
+      
+      await (supabaseAdmin.from('work_days').update({ notes: null }).eq('id', activeDay.id) as any);
+      const updatedDay = await getActiveWorkDay();
+      const summary = await getSummary(updatedDay);
+      await send('Jornada adicionada com sucesso!\n\nNota: O horário de encerramento foi definido igual ao de início. Use CORRIGIR DIA para ajustar se necessário.', mainMenu);
+      await send(summary);
+      return;
+    }
+  }
+
+  if (activeDay?.notes?.startsWith('CORRECT:')) {
+    const parts = activeDay.notes.split(':');
+    const mode = parts[1];
+    let update: any = { notes: null };
+    
+    if (mode === 'START_TIME' || mode === 'END_TIME') {
+      if (!isTimeInput) {
+        await send('⚠️ Formato de hora inválido. Use HH:MM (ex: 09:30).', cancelMenu);
+        return;
+      }
+      const sessionId = parts[2];
+      const [h = 0, m = 0] = textInput.split(':').map(Number);
+      const newDate = new Date(today + 'T00:00:00Z');
+      newDate.setUTCHours(h + 3, m, 0, 0);
+
+      if (mode === 'START_TIME') {
+        await (supabaseAdmin.from('sessions').update({ start_time: newDate.toISOString() }).eq('id', sessionId) as any);
+      } else {
+        const { data: sess } = await (supabaseAdmin.from('sessions').select('start_time').eq('id', sessionId).single() as any);
+        if (newDate < new Date(sess.start_time)) {
+          await send('⚠️ O encerramento não pode ser anterior ao início. Informe novamente:', cancelMenu);
+          return;
+        }
+        await (supabaseAdmin.from('sessions').update({ end_time: newDate.toISOString() }).eq('id', sessionId) as any);
+      }
+    } else if (textInput === 'UBER' || textInput === 'IFOOD') {
+      const platform = textInput;
+      if (mode === 'EARNED_PLATFORM') {
+        await (supabaseAdmin.from('work_days').update({ notes: `CORRECT:EARNED_VALUE:${platform}` }).eq('id', activeDay.id) as any);
+        await send(`Qual o valor dos ganhos no ${platform}?`, cancelMenu);
+        return;
+      }
+    } else if (!isNaN(num)) {
+      if (mode === 'EARNED_VALUE') {
+        if (num < 0) {
+          await send('⚠️ O valor dos ganhos não pode ser negativo. Informe novamente:', cancelMenu);
+          return;
+        }
+        const platform = parts[2];
+        const isUber = platform === 'UBER';
+        
+        // Get current values
+        const currentUber = Number(activeDay.uber_earned) || 0;
+        const currentIfood = Number(activeDay.ifood_earned) || 0;
+        
+        const newUber = isUber ? num : currentUber;
+        const newIfood = !isUber ? num : currentIfood;
+        
+        update.uber_earned = fromCents(toCents(newUber));
+        update.ifood_earned = fromCents(toCents(newIfood));
+        update.total_earned = fromCents(toCents(newUber) + toCents(newIfood));
+      } else if (mode === 'EARNED') {
+      // Fluxo antigo (ganhos totais): redireciona para escolher a plataforma,
+      // garantindo que o valor caia em uber_earned/ifood_earned e nunca "vire Extra".
+      await (supabaseAdmin.from('work_days').update({ notes: 'CORRECT:EARNED_PLATFORM' }).eq('id', activeDay.id) as any);
+      await send('De qual plataforma você deseja corrigir o ganho?', {
+        keyboard: [[{ text: 'UBER' }, { text: 'IFOOD' }], [{ text: 'CANCELAR' }]],
+        resize_keyboard: true
+      });
+      return;
+    } else if (mode === 'DELIVERIES') {
+        update.total_deliveries = Math.round(num);
+      } else if (mode === 'ODO_START') {
+        update.odometer_start = num;
+      } else if (mode === 'ODO_END') {
+        if (num < (Number(activeDay.odometer_start) || 0)) {
+          await send(`⚠️ O odômetro final não pode ser menor que o inicial (${formatNumberBR(activeDay.odometer_start)}).`, cancelMenu);
+          return;
+        }
+        update.odometer_end = num;
+      }
+    } else {
+      await send('⚠️ Entrada inválida.', cancelMenu);
+      return;
+    }
+
+    const res = await (supabaseAdmin.from('work_days').update(update).eq('id', activeDay.id).select().single() as any);
+    const summary = await getSummary(res.data);
+    await send('CORREÇÃO REALIZADA', {
+      keyboard: [[{ text: 'CORRIGIR DIA' }, { text: 'LIMPAR CHAT' }, { text: 'RESUMO' }], [{ text: 'MENU' }]],
+      resize_keyboard: true
+    });
+    await send(summary);
+    return;
+  }
+
+    // 2. Normal Flow
+    if (!activeDay || activeDay.odometer_start === null) {
+      if (isNaN(num)) {
+        await send('⚠️ Valor inválido. Informe o odômetro inicial:', cancelMenu);
+        return;
+      }
+      let day = activeDay;
+      if (!day) {
+        const res = await (supabaseAdmin.from('work_days').insert({ date: today as any, odometer_start: num, status: 'in_progress' as any }).select().single() as any);
+        day = res.data;
+      } else {
+        await (supabaseAdmin.from('work_days').update({ odometer_start: num, notes: null }).eq('id', day.id) as any);
+      }
+      if (!day) return;
+      await (supabaseAdmin.from('sessions').insert({ work_day_id: day.id, status: 'active' as any }) as any);
+      await send('Jornada iniciada!', {
+        keyboard: [[{ text: 'ENCERRAR JORNADA' }, { text: 'RESUMO' }]],
+        resize_keyboard: true
+      });
+      return;
+    }
+
+    if (activeDay.notes === 'AWAITING:CLOSE_ODO') {
+      if (num < (Number(activeDay.odometer_start) || 0)) {
+        await send(`⚠️ O odômetro final não pode ser menor que o inicial (${formatNumberBR(activeDay.odometer_start)}). Informe novamente:`, cancelMenu);
+        return;
+      }
+      const hasLiveData =
+        (Number(activeDay.ifood_deliveries) || 0) > 0 ||
+        (Number(activeDay.uber_deliveries) || 0) > 0;
+
+      if (hasLiveData) {
+        const { data: updatedDay, error } = await (supabaseAdmin
+          .from('work_days')
+          .update({ odometer_end: num, notes: 'AWAITING:CLOSE_CONFIRM' })
+          .eq('id', activeDay.id)
+          .select()
+          .single() as any);
+        if (error || !updatedDay) {
+          console.error('Failed to prepare live close confirmation:', error);
+          await send('Não foi possível preparar o fechamento. Tente novamente.', mainMenu);
+          return;
+        }
+        await send(
+          `<b>CONFIRMAR FECHAMENTO</b>\n\n` +
+          `iFood: ${formatCurrency(updatedDay.ifood_earned)} · ${updatedDay.ifood_deliveries ?? 0} entrega(s)\n` +
+          `Uber: ${formatCurrency(updatedDay.uber_earned)} · ${updatedDay.uber_deliveries ?? 0} entrega(s)\n` +
+          `<b>Total: ${formatCurrency(updatedDay.total_earned)} · ${updatedDay.total_deliveries ?? 0} entrega(s)</b>\n` +
+          `Odômetro final: ${formatNumberBR(updatedDay.odometer_end)} km\n\n` +
+          `Se estiver tudo certo, confirme. Se faltou algum lançamento, volte à jornada e registre antes de fechar.`,
+          {
+            keyboard: [[{ text: 'CONFIRMAR FECHAMENTO' }], [{ text: 'VOLTAR À JORNADA' }], [{ text: 'CANCELAR' }]],
+            resize_keyboard: true
+          }
+        );
+        return;
+      }
+
+      await (supabaseAdmin.from('work_days').update({ odometer_end: num, notes: 'AWAITING:CLOSE_IFOOD' }).eq('id', activeDay.id) as any);
+      await send(`iFood (acumulado: ${formatCurrency(activeDay.ifood_earned)}):`, cancelMenu);
+      return;
+    }
+
+    if (activeDay.notes === 'AWAITING:CLOSE_IFOOD') {
+      if (isNaN(num) || num < 0) {
+        await send('⚠️ Valor inválido. Informe o ganho no iFood (ou 0):', cancelMenu);
+        return;
+      }
+      await (supabaseAdmin.from('work_days').update({ ifood_earned: fromCents(toCents(num)), notes: 'AWAITING:CLOSE_UBER' }).eq('id', activeDay.id) as any);
+      await send(`Uber (acumulado: ${formatCurrency(activeDay.uber_earned)}):`, cancelMenu);
+      return;
+    }
+
+    if (activeDay.notes === 'AWAITING:CLOSE_UBER') {
+      if (isNaN(num) || num < 0) {
+        await send('⚠️ Valor inválido. Informe o ganho na Uber (ou 0):', cancelMenu);
+        return;
+      }
+      const totalEarned = fromCents(toCents(activeDay.ifood_earned) + toCents(num));
+      await (supabaseAdmin.from('work_days').update({
+        uber_earned: fromCents(toCents(num)),
+        total_earned: totalEarned,
+        notes: 'AWAITING:CLOSE_DELIVERIES'
+      }).eq('id', activeDay.id) as any);
+
+      const updatedDay = await getActiveWorkDay();
+      const goalStr = updatedDay.daily_goal !== null ? ` (Meta: ${formatCurrency(updatedDay.daily_goal)})` : '';
+      await send(`Quantas entregas você fez hoje? Acumulado: ${updatedDay.total_deliveries ?? 0}${goalStr}`, cancelMenu);
+      return;
+    }
+
+    if (activeDay.notes === 'AWAITING:CLOSE_DELIVERIES') {
+      if (isNaN(num) || num < 0 || !Number.isInteger(num)) {
+        await send('⚠️ Valor inválido. Informe o total de entregas:', cancelMenu);
+        return;
+      }
+      const res = await (supabaseAdmin.from('work_days').update({ 
+        total_deliveries: Math.round(num), 
+        status: 'completed' as any,
+        notes: null 
+      }).eq('id', activeDay.id).select().single() as any);
+      const summary = `Jornada encerrada! iFood: ${formatCurrency(res.data.ifood_earned)} | Uber: ${formatCurrency(res.data.uber_earned)} | Total: ${formatCurrency(res.data.total_earned)}`;
+      await send(summary, {
+        keyboard: [[{ text: 'CORRIGIR DIA' }, { text: 'LIMPAR CHAT' }, { text: 'RESUMO' }], [{ text: 'MENU' }]],
+        resize_keyboard: true
+      });
+      return;
+    }
+
+    // Fallback para lógica antiga caso notes esteja vazio mas o fluxo esteja no meio
+    if (activeDay.status === 'in_progress' && activeDay.odometer_end === null) {
+      if (num < Number(activeDay.odometer_start)) {
+        await send(`⚠️ O odômetro final não pode ser menor que o inicial (${formatNumberBR(activeDay.odometer_start)}). Informe novamente:`, cancelMenu);
+        return;
+      }
+      await (supabaseAdmin.from('work_days').update({ odometer_end: num, notes: 'AWAITING:CLOSE_UBER' }).eq('id', activeDay.id) as any);
+      await send('Uber:', cancelMenu);
+      return;
+    }
+
+    if (activeDay.total_earned === null) {
+      // Redireciona para o fluxo por plataforma: Uber e iFood devem ser informados
+      // separadamente para nunca caírem no fallback de "Extra" do painel.
+      await (supabaseAdmin.from('work_days').update({ notes: 'AWAITING:CLOSE_UBER' }).eq('id', activeDay.id) as any);
+      await send('Uber:', cancelMenu);
+      return;
+    }
+
+    if (activeDay.total_deliveries === null) {
+      const res = await (supabaseAdmin.from('work_days').update({ total_deliveries: Math.round(num), status: 'completed' as any }).eq('id', activeDay.id).select().single() as any);
+      const summary = await getSummary(res.data);
+      await send(`<b>DIA ${formatDateBR(res.data.date)} FECHADO</b>\n\n${summary}`, {
+        keyboard: [[{ text: 'CORRIGIR DIA' }, { text: 'RESUMO' }], [{ text: 'MENU' }]],
+        resize_keyboard: true
+      });
+      return;
+    }
+
+
+  await send('Não entendi o comando. Use os botões do menu.', mainMenu);
+};, '').replace(/\s/g, '').trim();
+  // Accept pt-BR formatted numbers (2.448,9) as well as plain decimals (2448.9 / 2448,9).
+  const rawVal = rawInput.includes(',')
+    ? rawInput.replace(/\./g, '').replace(',', '.')
+    : rawInput;
   const num = parseFloat(rawVal);
 
   if (activeDay?.notes?.startsWith('LIVE:EARNED:')) {
