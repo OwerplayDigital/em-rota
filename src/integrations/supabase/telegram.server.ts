@@ -652,12 +652,7 @@ export const handleTelegramUpdate = async (body: any) => {
 
   // Input Handling (Numeric/Prices/Times)
   const isTimeInput = /^\d{1,2}:\d{2}$/.test(textInput);
-  const rawInput = textInput.replace('R$', '').replace(/\s/g, '').trim();
-  // Aceita formato brasileiro (2.448,9) e decimal simples (2448,9 / 2448.9).
-  const rawVal = rawInput.includes(',')
-    ? rawInput.replace(/\./g, '').replace(',', '.')
-    : rawInput;
-  const num = parseFloat(rawVal);
+  const rawInput = textInput.replace('R
 
   if (activeDay?.notes?.startsWith('LIVE:EARNED:')) {
     if (!activeSession) {
@@ -1045,7 +1040,6 @@ export const handleTelegramUpdate = async (body: any) => {
 
   await send('Não entendi o comando. Use os botões do menu.', mainMenu);
 };, '').replace(/\s/g, '').trim();
-  // Accept pt-BR formatted numbers (2.448,9) as well as plain decimals (2448.9 / 2448,9).
   const rawVal = rawInput.includes(',')
     ? rawInput.replace(/\./g, '').replace(',', '.')
     : rawInput;
