@@ -154,7 +154,8 @@ export const handleTelegramUpdate = async (body: any) => {
     keyboard: [
       [{ text: 'LANÇAR IFOOD' }, { text: 'LANÇAR UBER' }],
       [{ text: 'ATUALIZAR KM' }],
-      [{ text: 'ENCERRAR JORNADA' }, { text: 'CANCELAR JORNADA' }]
+      [{ text: 'ENCERRAR JORNADA' }, { text: 'CANCELAR JORNADA' }],
+      [{ text: 'MENU' }]
     ],
     resize_keyboard: true
   };
@@ -918,10 +919,7 @@ export const handleTelegramUpdate = async (body: any) => {
       }
       if (!day) return;
       await (supabaseAdmin.from('sessions').insert({ work_day_id: day.id, status: 'active' as any }) as any);
-      await send('Jornada iniciada!', {
-        keyboard: [[{ text: 'ENCERRAR JORNADA' }]],
-        resize_keyboard: true
-      });
+      await send('Jornada iniciada!', activeJourneyMenu);
       return;
     }
 
