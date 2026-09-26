@@ -160,6 +160,15 @@ export const handleTelegramUpdate = async (body: any) => {
     resize_keyboard: true
   };
 
+  const closedDayMenu = {
+    keyboard: [
+      [{ text: 'REABRIR DIA' }],
+      [{ text: 'CORRIGIR DIA' }],
+      [{ text: 'MENU' }]
+    ],
+    resize_keyboard: true
+  };
+
   const cancelMenu = {
     keyboard: [[{ text: 'CANCELAR' }]],
     resize_keyboard: true
@@ -194,7 +203,8 @@ export const handleTelegramUpdate = async (body: any) => {
     let statusMsg = activeSession ? '🏃 Jornada em andamento.' : '⏸️ Nenhuma jornada ativa.';
     if (activeDay?.status === 'completed') statusMsg = '🏁 Dia fechado.';
     
-    await send(`<b>EM ROTA</b>\n\n${statusMsg}`, activeSession ? activeJourneyMenu : mainMenu);
+    const menu = activeSession ? activeJourneyMenu : (activeDay?.status === 'completed' ? closedDayMenu : mainMenu);
+    await send(`<b>EM ROTA</b>\n\n${statusMsg}`, menu);
     return;
   }
 
@@ -271,10 +281,7 @@ export const handleTelegramUpdate = async (body: any) => {
 
   if (textInput === 'INICIAR JORNADA') {
     if (activeDay?.status === 'completed') {
-      await send('⚠️ O dia já foi fechado.\n\nPara continuar registrando, use:\n<b>CORRIGIR DIA → REABRIR DIA</b>', {
-        keyboard: [[{ text: 'CORRIGIR DIA' }], [{ text: 'MENU' }]],
-        resize_keyboard: true
-      });
+      await send('⚠️ O dia já foi fechado.\n\nPara continuar registrando, use:\n<b>CORRIGIR DIA → REABRIR DIA</b>', closedDayMenu);
       return;
     }
     if (activeSession) {
@@ -421,7 +428,7 @@ export const handleTelegramUpdate = async (body: any) => {
       return;
     }
     if (activeDay.status === 'completed') {
-      await send('O dia de hoje já está fechado.', { keyboard: [[{ text: 'CORRIGIR DIA' }], [{ text: 'MENU' }]], resize_keyboard: true });
+      await send('O dia de hoje já está fechado.', closedDayMenu);
       return;
     }
     await (supabaseAdmin.from('work_days').update({ notes: 'AWAITING:CLOSE_ODO' }).eq('id', activeDay.id) as any);
