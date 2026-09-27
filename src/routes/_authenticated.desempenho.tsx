@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import {
   Clock, Gauge, Package, TrendingUp, Zap,
-  Trophy, Wallet
+  Trophy, Wallet, Bike
 } from 'lucide-react'
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { fetchDashboardData } from '@/lib/dashboard.functions'
@@ -131,7 +131,7 @@ function PerformancePage() {
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mx-auto max-w-2xl px-5 pb-16 pt-6 md:px-10 md:pt-10 space-y-6"
+        className="mx-auto max-w-6xl px-5 pb-16 pt-6 md:px-10 md:pt-10 space-y-5"
       >
         {/* Cabeçalho */}
         <div className="flex items-center gap-4">
@@ -159,16 +159,44 @@ function PerformancePage() {
           ))}
         </div>
 
-        {/* Grid de Métricas */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          <MetricCard icon={Gauge} label="KM rodados" value={metrics.totalDistance > 0 ? `${metrics.totalDistance.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} km` : '—'} />
-          <MetricCard icon={Clock} label="Horas trabalhadas" value={metrics.totalMs > 0 ? formatDuration(metrics.totalMs) : '—'} />
-          <MetricCard icon={Wallet} label="Ganhos médios/dia" value={formatCurrency(fromCents(Math.round(toCents(metrics.totalEarned) / avgDays)))} />
-          <MetricCard icon={TrendingUp} label="Ganhos por hora" value={metrics.avgPerHour > 0 ? `${formatCurrency(metrics.avgPerHour)}/h` : '—'} />
-          <MetricCard icon={Gauge} label="Ganhos por km" value={metrics.avgPerKm > 0 ? `${formatCurrency(metrics.avgPerKm)}/km` : '—'} />
-          <MetricCard icon={Zap} label="Entregas por hora" value={metrics.deliveriesPerHour > 0 ? metrics.deliveriesPerHour.toFixed(1) : '—'} />
-          <MetricCard icon={Package} label="Média entregas/dia" value={filtered.workDays.length > 0 ? (metrics.totalDeliveries / avgDays).toFixed(1) : '—'} />
-          <MetricCard icon={Clock} label="Tempo médio" value={metrics.totalMs > 0 ? formatDuration(metrics.totalMs / avgDays) : '—'} />
+        {/* Painel compacto inspirado no conceito aprovado */}
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <MetricCard icon={Wallet} label="Faturamento total" value={formatCurrency(metrics.totalEarned)} accent="green" />
+          <MetricCard icon={Package} label="iFood" value={formatCurrency(platform.ifood)} detail={`${metrics.totalDeliveries} entregas no período`} accent="red" />
+          <MetricCard icon={Bike} label="Uber" value={formatCurrency(platform.uber)} detail={`${platform.uberPct.toFixed(0)}% do faturamento`} accent="purple" />
+          <MetricCard icon={Gauge} label="Distância percorrida" value={metrics.totalDistance > 0 ? `${metrics.totalDistance.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} km` : '—'} accent="blue" />
+          <MetricCard icon={Clock} label="Tempo online" value={metrics.totalMs > 0 ? formatDuration(metrics.totalMs) : '—'} accent="amber" />
+          <MetricCard icon={TrendingUp} label="Média por hora" value={metrics.avgPerHour > 0 ? `${formatCurrency(metrics.avgPerHour)}/h` : '—'} accent="green" />
+          <MetricCard icon={Gauge} label="Média por km" value={metrics.avgPerKm > 0 ? `${formatCurrency(metrics.avgPerKm)}/km` : '—'} accent="blue" />
+          <MetricCard icon={Zap} label="Entregas por hora" value={metrics.deliveriesPerHour > 0 ? metrics.deliveriesPerHour.toFixed(1) : '—'} accent="purple" />
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="rounded-[24px] border border-white/10 bg-black p-5">
+            <div className="text-sm font-black">Resumo do período</div>
+            <div className="mt-4 divide-y divide-white/10 text-sm">
+              <SummaryRow label="Dias trabalhados" value={String(filtered.workDays.length)} />
+              <SummaryRow label="Entregas" value={String(metrics.totalDeliveries)} />
+              <SummaryRow label="Distância" value={`${metrics.totalDistance.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} km`} />
+              <SummaryRow label="Tempo online" value={metrics.totalMs > 0 ? formatDuration(metrics.totalMs) : '—'} />
+              <SummaryRow label="Média por dia" value={formatCurrency(fromCents(Math.round(toCents(metrics.totalEarned) / avgDays)))} />
+              <SummaryRow label="Faturamento total" value={formatCurrency(metrics.totalEarned)} strong />
+            </div>
+          </div>
+          <div className="rounded-[24px] border border-white/10 bg-black p-5">
+            <div className="text-sm font-black">Faturamento por plataforma</div>
+            <div className="mt-5 flex items-center justify-center gap-6">
+              <div className="relative h-28 w-28 rounded-full" style={{background:`conic-gradient(#EA1D2C 0 ${platform.ifoodPct}%, #6750D8 ${platform.ifoodPct}% 100%)`}}>
+                <div className="absolute inset-[16px] flex items-center justify-center rounded-full bg-black text-center">
+                  <div><div className="text-sm font-black">{formatCurrency(platform.total)}</div><div className="text-[9px] text-white/40">Total</div></div>
+                </div>
+              </div>
+              <div className="min-w-0 flex-1 space-y-3 text-sm">
+                <PlatformLine label="iFood" value={platform.ifood} pct={platform.ifoodPct} color="bg-[#EA1D2C]" />
+                <PlatformLine label="Uber" value={platform.uber} pct={platform.uberPct} color="bg-[#6750D8]" />
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Comparativo de Plataformas */}
@@ -268,20 +296,36 @@ function PerformancePage() {
   )
 }
 
-function MetricCard({ icon: Icon, label, value }: { icon: any; label: string; value: string }) {
+function MetricCard({ icon: Icon, label, value, detail, accent = 'green' }: { icon: any; label: string; value: string; detail?: string; accent?: 'green'|'red'|'purple'|'blue'|'amber' }) {
+  const accents = {
+    green: 'bg-emerald-500/15 text-emerald-400',
+    red: 'bg-red-500/15 text-red-400',
+    purple: 'bg-violet-500/15 text-violet-400',
+    blue: 'bg-sky-500/15 text-sky-400',
+    amber: 'bg-amber-500/15 text-amber-400',
+  }
   return (
-    <div className="rounded-[22px] border border-white/10 bg-[#1A1C20] p-4 space-y-2.5">
-      <div className="flex items-center gap-2">
-        <div className="w-7 h-7 rounded-lg bg-[#B8E64A]/10 flex items-center justify-center">
-          <Icon className="w-3.5 h-3.5 text-[#B8E64A]" />
+    <div className="rounded-[20px] border border-white/10 bg-black p-4">
+      <div className="flex items-center gap-3">
+        <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", accents[accent])}>
+          <Icon className="h-5 w-5" />
         </div>
-        <span className="text-[9px] font-bold text-white/45 uppercase tracking-widest leading-tight">
-          {label}
-        </span>
+        <div className="min-w-0">
+          <div className="text-[10px] font-semibold text-white/55">{label}</div>
+          <div className="truncate text-xl font-black tracking-tight text-white">{value}</div>
+          {detail && <div className="mt-0.5 truncate text-[9px] text-white/40">{detail}</div>}
+        </div>
       </div>
-      <div className="text-lg font-black tracking-tight text-white truncate">{value}</div>
     </div>
   )
+}
+
+function SummaryRow({ label, value, strong = false }: { label: string; value: string; strong?: boolean }) {
+  return <div className="flex items-center justify-between gap-4 py-2.5"><span className="text-white/55">{label}</span><span className={cn("font-bold", strong ? "text-emerald-400" : "text-white")}>{value}</span></div>
+}
+
+function PlatformLine({ label, value, pct, color }: { label: string; value: number; pct: number; color: string }) {
+  return <div className="flex items-center justify-between gap-3"><div className="flex items-center gap-2"><span className={cn("h-2.5 w-2.5 rounded-full", color)} /><span>{label}</span></div><div className="text-right"><div className="font-bold">{formatCurrency(value)}</div><div className="text-[9px] text-white/40">{pct.toFixed(0)}%</div></div></div>
 }
 
 function PlatformCompareRow({ label, dotColor, rowClassName, pct, total, avgPerDelivery }: {
