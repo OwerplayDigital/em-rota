@@ -373,47 +373,12 @@ export const handleTelegramUpdate = async (body: any) => {
   }
 
   if (textInput === 'ENCERRAR JORNADA') {
-    if (!activeSession) {
+    if (!activeSession || !activeDay) {
       await send('Não existe nenhuma jornada em andamento.', mainMenu);
       return;
     }
-
-    const endTime = new Date().toISOString();
-    const { error: endSessionError } = await (supabaseAdmin
-      .from('sessions')
-      .update({ end_time: endTime, status: 'completed' as any })
-      .eq('id', activeSession.id)
-      .eq('status', 'active' as any) as any);
-    if (endSessionError) {
-      console.error('Failed to end active session:', endSessionError);
-      await send('Não foi possível encerrar a jornada. Nenhum registro foi alterado.', mainMenu);
-      return;
-    }
-    
-    const day = await getActiveWorkDay();
-    if (!day) return;
-    const { data: sessions } = await (supabaseAdmin.from('sessions').select('*').eq('work_day_id', day.id).eq('status', 'completed' as any) as any);
-    
-    const thisSessionMs = new Date(endTime).getTime() - new Date(activeSession.start_time).getTime();
-    let totalMs = 0;
-    (sessions as any[])?.forEach(s => {
-      if (s.start_time && s.end_time) totalMs += new Date(s.end_time).getTime() - new Date(s.start_time).getTime();
-    });
-
-    const distance = (day.odometer_end !== null && day.odometer_start !== null) ? (day.odometer_end - day.odometer_start) : null;
-
-    const earnedCents = toCents(day.total_earned);
-    const goalCents = toCents(day.daily_goal);
-    const goalStr = day.daily_goal !== null ? 
-      `\n\n<b>META DO DIA</b>\n` +
-      `${formatCurrency(day.total_earned)} / ${formatCurrency(day.daily_goal)}\n` +
-      `${(goalCents > 0 ? (earnedCents / goalCents) * 100 : 0).toFixed(1)}% atingido\n` +
-      `${earnedCents < goalCents ? `Faltam: ${formatCurrency(fromCents(goalCents - earnedCents))}` : 'Meta Atingida'}` : '';
-
-    await send(`<b>JORNADA ENCERRADA</b>\n\nDuração desta jornada: ${formatDuration(thisSessionMs)}\n\n<b>TOTAL DE ${formatDateBR(day.date)}:</b>\nTempo na rua: ${formatDuration(totalMs)}\nGanhos: ${formatCurrency(day.total_earned)}\nEntregas: ${day.total_deliveries ?? 'Ainda não informado'}${goalStr}`, {
-      keyboard: [[{ text: 'INICIAR JORNADA' }, { text: 'FECHAR DIA' }], [{ text: 'EXCLUIR JORNADA' }], [{ text: 'MENU' }]],
-      resize_keyboard: true
-    });
+    await (supabaseAdmin.from('work_days').update({ notes: 'LIVE:SESSION_ODO_END' }).eq('id', activeDay.id) as any);
+    await send('Qual é o odômetro ao encerrar esta jornada?', cancelMenu);
     return;
   }
 
