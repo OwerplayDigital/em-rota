@@ -25,7 +25,10 @@ function DashboardPage() {
     .filter((s:any) => s.work_day_id === day.id && s.start_time && s.end_time)
     .reduce((total:number, s:any) => total + Math.max(0, new Date(s.end_time).getTime() - new Date(s.start_time).getTime()), 0) : 0
   const elapsed = previousSessionsMs + currentSessionMs
-  const km = day?.odometer_start != null && day?.odometer_end != null ? Math.max(0,Number(day.odometer_end)-Number(day.odometer_start)) : 0
+  const daySessions = day ? data.sessions.filter((s:any) => s.work_day_id === day.id) : []
+  const sessionKm = daySessions.filter((s:any) => s.odometer_start != null && s.odometer_end != null).reduce((sum:number,s:any) => sum + Math.max(0,Number(s.odometer_end)-Number(s.odometer_start)),0)
+  const currentKm = session?.odometer_start != null && day?.odometer_end != null ? Math.max(0,Number(day.odometer_end)-Number(session.odometer_start)) : 0
+  const km = sessionKm + currentKm
   const last = data.lastCompletedDay
   const lastKm = last?.odometer_start != null && last?.odometer_end != null ? Math.max(0,Number(last.odometer_end)-Number(last.odometer_start)) : 0
   const goal = Number(day?.daily_goal || data.todayGoal || 0)
