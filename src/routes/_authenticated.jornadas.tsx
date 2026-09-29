@@ -154,10 +154,10 @@ function JornadasPage() {
                   </div>
                 </div>
               </div>
-              <div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold text-white/55">
-                {km != null && <span className="rounded-full bg-white/7 px-3 py-1.5">{km.toLocaleString('pt-BR')} km</span>}
-                <span className="rounded-full bg-white/7 px-3 py-1.5">iFood R$ {Number(day?.ifood_earned ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                <span className="rounded-full bg-white/7 px-3 py-1.5">Uber R$ {Number(day?.uber_earned ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+              <div className="mt-4 grid grid-cols-[auto_1fr_1fr] gap-2 text-[11px] font-semibold text-white/55">
+                {km != null && <span className="whitespace-nowrap rounded-full bg-white/7 px-2.5 py-1.5 text-center">{km.toLocaleString('pt-BR')} km</span>}
+                <span className="min-w-0 whitespace-nowrap rounded-full bg-white/7 px-2 py-1.5 text-center">iFood R$ {Number(day?.ifood_earned ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                <span className="min-w-0 whitespace-nowrap rounded-full bg-white/7 px-2 py-1.5 text-center">Uber R$ {Number(day?.uber_earned ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
               </div>
             </div>
           )
