@@ -20,7 +20,11 @@ function DashboardPage() {
   const day = data.workDays.find((d:any) => d.date === today)
   const session = data.activeSession
   const active = Boolean(data.hasActiveSession && session && day)
-  const elapsed = session?.start_time ? Math.max(0, Date.now()-new Date(session.start_time).getTime()) : 0
+  const currentSessionMs = session?.start_time ? Math.max(0, Date.now()-new Date(session.start_time).getTime()) : 0
+  const previousSessionsMs = day ? data.sessions
+    .filter((s:any) => s.work_day_id === day.id && s.start_time && s.end_time)
+    .reduce((total:number, s:any) => total + Math.max(0, new Date(s.end_time).getTime() - new Date(s.start_time).getTime()), 0) : 0
+  const elapsed = previousSessionsMs + currentSessionMs
   const km = day?.odometer_start != null && day?.odometer_end != null ? Math.max(0,Number(day.odometer_end)-Number(day.odometer_start)) : 0
   const last = data.lastCompletedDay
   const lastKm = last?.odometer_start != null && last?.odometer_end != null ? Math.max(0,Number(last.odometer_end)-Number(last.odometer_start)) : 0
