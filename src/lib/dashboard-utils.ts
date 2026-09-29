@@ -77,10 +77,15 @@ export const calculateMetrics = (workDays: any[], sessions: any[]) => {
   const totalIfood = fromCents(totalIfoodCents);
   const totalDeliveries = workDays.reduce((acc, wd) => acc + (wd.total_deliveries || 0), 0);
   
-  const totalDistance = workDays.reduce((acc, wd) => {
-    if (wd.odometer_start !== null && wd.odometer_end !== null) {
-      return acc + (Number(wd.odometer_end) - Number(wd.odometer_start));
+  const sessionDistanceByDay = new Map<string, number>();
+  sessions.forEach((s: any) => {
+    if (s.odometer_start != null && s.odometer_end != null) {
+      sessionDistanceByDay.set(s.work_day_id, (sessionDistanceByDay.get(s.work_day_id) || 0) + Math.max(0, Number(s.odometer_end) - Number(s.odometer_start)));
     }
+  });
+  const totalDistance = workDays.reduce((acc, wd) => {
+    if (sessionDistanceByDay.has(wd.id)) return acc + (sessionDistanceByDay.get(wd.id) || 0);
+    if (wd.odometer_start !== null && wd.odometer_end !== null) return acc + Math.max(0, Number(wd.odometer_end) - Number(wd.odometer_start));
     return acc;
   }, 0);
 
