@@ -27,6 +27,15 @@ type Journey = {
   work_days?: WorkDay | null
 }
 
+type DayJourney = {
+  id: string
+  work_day_id: string
+  start_time: string
+  end_time: string | null
+  sessions: Journey[]
+  work_days?: WorkDay | null
+}
+
 function formatDate(value?: string) {
   if (!value) return '—'
   const [y, m, d] = value.split('-')
@@ -66,6 +75,33 @@ function JornadasPage() {
 
   useEffect(() => { loadJourneys() }, [loadJourneys])
 
+  // Valores, entregas e KM pertencem ao dia (work_day), não a uma sessão isolada.
+  // Agrupar aqui evita repetir o mesmo total quando houve mais de uma jornada no mesmo dia.
+  const dayJourneys: DayJourney[] = Object.values(
+    journeys.reduce<Record<string, DayJourney>>((acc, journey) => {
+      const existing = acc[journey.work_day_id]
+      if (!existing) {
+        acc[journey.work_day_id] = {
+          id: journey.work_day_id,
+          work_day_id: journey.work_day_id,
+          start_time: journey.start_time,
+          end_time: journey.end_time,
+          sessions: [journey],
+          work_days: journey.work_days,
+        }
+      } else {
+        existing.sessions.push(journey)
+        if (new Date(journey.start_time) < new Date(existing.start_time)) {
+          existing.start_time = journey.start_time
+        }
+        if (journey.end_time && (!existing.end_time || new Date(journey.end_time) > new Date(existing.end_time))) {
+          existing.end_time = journey.end_time
+        }
+      }
+      return acc
+    }, {})
+  ).sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime())
+
   return (
     <div className="min-h-screen bg-[#111216] p-5 pb-16 text-white md:p-8">
       <h1 className="mt-2 text-3xl font-black tracking-[-0.04em]">Jornadas</h1>
@@ -73,13 +109,13 @@ function JornadasPage() {
       <div className="mt-8 grid gap-3">
         {loading ? (
           <div className="py-10 text-center text-sm text-white/40">Carregando jornadas...</div>
-        ) : journeys.length === 0 ? (
+        ) : dayJourneys.length === 0 ? (
           <div className="rounded-[28px] border border-white/10 bg-[#1A1C20] px-6 py-12 text-center">
             <Map className="mx-auto mb-3 h-7 w-7 text-white/30" />
             <p className="font-semibold">Nenhuma jornada finalizada</p>
             <p className="mt-1 text-xs text-white/40">As jornadas encerradas pelo bot aparecerão aqui.</p>
           </div>
-        ) : journeys.map((journey) => {
+        ) : dayJourneys.map((journey) => {
           const day = journey.work_days
           const km = day?.odometer_start != null && day?.odometer_end != null
             ? Math.max(0, Number(day.odometer_end) - Number(day.odometer_start))
@@ -94,7 +130,25 @@ function JornadasPage() {
                   </div>
                   <div className="mt-2 flex items-center gap-2 text-xs font-semibold text-white/45">
                     <Clock3 className="h-4 w-4" />
-                    {formatTime(journey.start_time)} → {formatTime(journey.end_time)}
+                    {journey.sessions.length > 1
+                      ? `${journey.sessions.length} jornadas · ${journey.sessions.reduce((total, s) => {
+                          if (!s.end_time) return total
+                          return total + Math.max(0, new Date(s.end_time).getTime() - new Date(s.start_time).getTime())
+                        }, 0) / 3600000 < 1
+                          ? Math.round(journey.sessions.reduce((total, s) => {
+                              if (!s.end_time) return total
+                              return total + Math.max(0, new Date(s.end_time).getTime() - new Date(s.start_time).getTime())
+                            }, 0) / 60000) + ' min'
+                          : (() => {
+                              const ms = journey.sessions.reduce((total, s) => {
+                                if (!s.end_time) return total
+                                return total + Math.max(0, new Date(s.end_time).getTime() - new Date(s.start_time).getTime())
+                              }, 0)
+                              const h = Math.floor(ms / 3600000)
+                              const m = Math.floor((ms % 3600000) / 60000)
+                              return `${h}h ${m}min`
+                            })()`
+                      : `${formatTime(journey.start_time)} → ${formatTime(journey.end_time)}`}
                   </div>
                 </div>
                 <div className="text-right">
