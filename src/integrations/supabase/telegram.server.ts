@@ -633,6 +633,37 @@ export const handleTelegramUpdate = async (body: any) => {
     : rawInput;
   const num = parseFloat(rawVal);
 
+  if (activeDay?.notes === 'LIVE:SESSION_ODO_END') {
+    if (!activeSession) {
+      await (supabaseAdmin.from('work_days').update({ notes: null }).eq('id', activeDay.id) as any);
+      await send('A jornada não está mais ativa.', mainMenu);
+      return;
+    }
+    const sessionStartOdo = Number(activeSession.odometer_start);
+    if (isNaN(num) || isNaN(sessionStartOdo) || num < sessionStartOdo) {
+      await send('Odômetro final inválido. Ele não pode ser menor que o inicial desta jornada.', cancelMenu);
+      return;
+    }
+    const endTime = new Date().toISOString();
+    const { error } = await (supabaseAdmin.from('sessions').update({ odometer_end: num, end_time: endTime, status: 'completed' as any }).eq('id', activeSession.id).eq('status', 'active' as any) as any);
+    if (error) {
+      console.error('Failed to end journey with odometer:', error);
+      await send('Não foi possível encerrar a jornada. Tente novamente.', activeJourneyMenu);
+      return;
+    }
+    const { data: completedSessions } = await (supabaseAdmin.from('sessions').select('*').eq('work_day_id', activeDay.id).eq('status', 'completed' as any) as any);
+    const valid = (completedSessions || []).filter((s:any) => s.odometer_start != null && s.odometer_end != null);
+    const totalKm = valid.reduce((sum:number,s:any) => sum + Math.max(0, Number(s.odometer_end)-Number(s.odometer_start)),0);
+    const firstOdo = valid.length ? Number(valid[0].odometer_start) : sessionStartOdo;
+    await (supabaseAdmin.from('work_days').update({ odometer_start: firstOdo, odometer_end: firstOdo + totalKm, notes: null }).eq('id', activeDay.id) as any);
+    const duration = new Date(endTime).getTime() - new Date(activeSession.start_time).getTime();
+    await send('<b>JORNADA ENCERRADA</b>\n\nOdômetro: ' + formatNumberBR(sessionStartOdo) + ' → ' + formatNumberBR(num) + ' km\nDistância desta jornada: <b>' + formatNumberBR(num-sessionStartOdo) + ' km</b>\nDuração: ' + formatDuration(duration), {
+      keyboard: [[{ text: 'INICIAR JORNADA' }, { text: 'FECHAR DIA' }], [{ text: 'MENU' }]],
+      resize_keyboard: true
+    });
+    return;
+  }
+
   if (activeDay?.notes?.startsWith('LIVE:EARNED:')) {
     if (!activeSession) {
       await (supabaseAdmin.from('work_days').update({ notes: null }).eq('id', activeDay.id) as any);
