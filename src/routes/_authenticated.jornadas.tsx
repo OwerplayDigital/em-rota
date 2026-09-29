@@ -64,6 +64,7 @@ function formatJourneyDuration(sessions: Journey[]) {
 function JornadasPage() {
   const [journeys, setJourneys] = useState<Journey[]>([])
   const [loading, setLoading] = useState(true)
+  const [expandedDay, setExpandedDay] = useState<string | null>(null)
 
   const loadJourneys = useCallback(async () => {
     setLoading(true)
@@ -138,12 +139,16 @@ function JornadasPage() {
                     <CalendarDays className="h-4 w-4 text-white/45" />
                     {formatDate(day?.date)}
                   </div>
-                  <div className="mt-2 flex items-center gap-2 text-xs font-semibold text-white/45">
+                  <button
+                    type="button"
+                    onClick={() => journey.sessions.length > 1 && setExpandedDay(expandedDay === journey.id ? null : journey.id)}
+                    className={`mt-2 flex items-center gap-2 text-xs font-semibold text-white/45 ${journey.sessions.length > 1 ? 'cursor-pointer active:text-white/70' : 'cursor-default'}`}
+                  >
                     <Clock3 className="h-4 w-4" />
                     {journey.sessions.length > 1
                       ? `${journey.sessions.length} jornadas · ${formatJourneyDuration(journey.sessions)}`
                       : `${formatTime(journey.start_time)} → ${formatTime(journey.end_time)}`}
-                  </div>
+                  </button>
                 </div>
                 <div className="text-right">
                   <div className="text-xl font-black text-[#B8E64A]">
@@ -154,6 +159,21 @@ function JornadasPage() {
                   </div>
                 </div>
               </div>
+              {journey.sessions.length > 1 && expandedDay === journey.id && (
+                <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-xs">
+                  <div className="mb-2 font-bold text-white/60">Horários das jornadas</div>
+                  <div className="space-y-1.5">
+                    {[...journey.sessions]
+                      .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
+                      .map((session, index) => (
+                        <div key={session.id} className="flex items-center justify-between text-white/55">
+                          <span>{index + 1}ª jornada</span>
+                          <span className="font-semibold text-white/80">{formatTime(session.start_time)} → {formatTime(session.end_time)}</span>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
               <div className="mt-4 grid grid-cols-[auto_1fr_1fr] gap-2 text-[11px] font-semibold text-white/55">
                 {km != null && <span className="whitespace-nowrap rounded-full bg-white/7 px-2.5 py-1.5 text-center">{km.toLocaleString('pt-BR')} km</span>}
                 <span className="min-w-0 whitespace-nowrap rounded-full bg-white/7 px-2 py-1.5 text-center">iFood R$ {Number(day?.ifood_earned ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
