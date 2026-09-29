@@ -24,6 +24,8 @@ type Journey = {
   start_time: string
   end_time: string | null
   status: 'active' | 'completed'
+  odometer_start: number | null
+  odometer_end: number | null
   work_days?: WorkDay | null
 }
 
@@ -70,7 +72,7 @@ function JornadasPage() {
     setLoading(true)
     const { data, error } = await supabase
       .from('sessions')
-      .select('id, work_day_id, start_time, end_time, status, work_days(id, date, status, odometer_start, odometer_end, ifood_earned, uber_earned, total_earned, total_deliveries)')
+      .select('id, work_day_id, start_time, end_time, status, odometer_start, odometer_end, work_days(id, date, status, odometer_start, odometer_end, ifood_earned, uber_earned, total_earned, total_deliveries)')
       .eq('status', 'completed')
       .order('start_time', { ascending: false })
       .limit(50)
@@ -128,9 +130,13 @@ function JornadasPage() {
           </div>
         ) : dayJourneys.map((journey) => {
           const day = journey.work_days
-          const km = day?.odometer_start != null && day?.odometer_end != null
+          const sessionKm = journey.sessions
+            .filter(s => s.odometer_start != null && s.odometer_end != null)
+            .reduce((sum, s) => sum + Math.max(0, Number(s.odometer_end) - Number(s.odometer_start)), 0)
+          const hasSessionKm = journey.sessions.some(s => s.odometer_start != null && s.odometer_end != null)
+          const km = hasSessionKm ? sessionKm : (day?.odometer_start != null && day?.odometer_end != null
             ? Math.max(0, Number(day.odometer_end) - Number(day.odometer_start))
-            : null
+            : null)
           return (
             <div key={journey.id} className="rounded-[26px] border border-white/10 bg-[#1A1C20] p-5">
               <div className="flex items-start justify-between gap-4">
