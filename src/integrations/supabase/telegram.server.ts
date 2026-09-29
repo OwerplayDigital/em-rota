@@ -152,7 +152,8 @@ export const handleTelegramUpdate = async (body: any) => {
 
   const activeJourneyMenu = {
     keyboard: [
-      [{ text: 'LANÇAR IFOOD' }, { text: 'LANÇAR UBER' }],
+      [{ text: 'LANÇAR IFOOD' }, { text: 'IFOOD DUPLA' }],
+      [{ text: 'LANÇAR UBER' }],
       [{ text: 'ATUALIZAR KM' }],
       [{ text: 'ENCERRAR JORNADA' }, { text: 'CANCELAR JORNADA' }],
       [{ text: 'MENU' }]
@@ -217,13 +218,14 @@ export const handleTelegramUpdate = async (body: any) => {
     return;
   }
 
-  if (textInput === 'LANÇAR IFOOD' || textInput === 'LANÇAR UBER') {
+  if (textInput === 'LANÇAR IFOOD' || textInput === 'IFOOD DUPLA' || textInput === 'LANÇAR UBER') {
     if (!activeSession || !activeDay) {
       await send('Inicie uma jornada antes de lançar ganhos.', mainMenu);
       return;
     }
-    const platform = textInput === 'LANÇAR IFOOD' ? 'IFOOD' : 'UBER';
-    const { error } = await (supabaseAdmin.from('work_days').update({ notes: `LIVE:EARNED:${platform}` }).eq('id', activeDay.id) as any);
+    const platform = textInput === 'LANÇAR UBER' ? 'UBER' : 'IFOOD';
+    const deliveryCount = textInput === 'IFOOD DUPLA' ? 2 : 1;
+    const { error } = await (supabaseAdmin.from('work_days').update({ notes: `LIVE:EARNED:${platform}:${deliveryCount}` }).eq('id', activeDay.id) as any);
     if (error) {
       console.error('Failed to prepare live earning:', error);
       await send('Não foi possível preparar o lançamento. Tente novamente.', activeJourneyMenu);
@@ -677,13 +679,14 @@ export const handleTelegramUpdate = async (body: any) => {
       return;
     }
     const platform = activeDay.notes.split(':')[2];
+    const deliveryCount = Math.max(1, Number(activeDay.notes.split(':')[3]) || 1);
     const addCents = toCents(num);
     const currentIfoodCents = toCents(activeDay.ifood_earned);
     const currentUberCents = toCents(activeDay.uber_earned);
     const nextIfoodCents = platform === 'IFOOD' ? currentIfoodCents + addCents : currentIfoodCents;
     const nextUberCents = platform === 'UBER' ? currentUberCents + addCents : currentUberCents;
-    const nextIfoodDeliveries = (Number(activeDay.ifood_deliveries) || 0) + (platform === 'IFOOD' ? 1 : 0);
-    const nextUberDeliveries = (Number(activeDay.uber_deliveries) || 0) + (platform === 'UBER' ? 1 : 0);
+    const nextIfoodDeliveries = (Number(activeDay.ifood_deliveries) || 0) + (platform === 'IFOOD' ? deliveryCount : 0);
+    const nextUberDeliveries = (Number(activeDay.uber_deliveries) || 0) + (platform === 'UBER' ? deliveryCount : 0);
     const update = {
       ifood_earned: fromCents(nextIfoodCents),
       uber_earned: fromCents(nextUberCents),
