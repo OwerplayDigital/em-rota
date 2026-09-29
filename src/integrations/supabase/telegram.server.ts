@@ -314,10 +314,8 @@ export const handleTelegramUpdate = async (body: any) => {
       return;
     }
 
-    await (supabaseAdmin.from('sessions').insert({ work_day_id: activeDay.id, status: 'active' as any }) as any);
-    await send('Jornada iniciada!', {
-      ...activeJourneyMenu
-    });
+    await (supabaseAdmin.from('work_days').update({ notes: 'AWAITING:ODO_START_MANUAL' }).eq('id', activeDay.id) as any);
+    await send('Qual é o odômetro inicial desta nova jornada?', cancelMenu);
     return;
   }
 
@@ -742,7 +740,7 @@ export const handleTelegramUpdate = async (body: any) => {
 
     if (odoToUse !== null) {
       await (supabaseAdmin.from('work_days').update({ odometer_start: odoToUse, notes: null }).eq('id', activeDay.id) as any);
-      await (supabaseAdmin.from('sessions').insert({ work_day_id: activeDay.id, status: 'active' as any }) as any);
+      await (supabaseAdmin.from('sessions').insert({ work_day_id: activeDay.id, status: 'active' as any, odometer_start: num } as any) as any);
       await send(`Jornada iniciada com odômetro <b>${formatNumberBR(odoToUse)} km</b>!`, activeJourneyMenu);
       return;
     }
@@ -750,7 +748,7 @@ export const handleTelegramUpdate = async (body: any) => {
 
   if (activeDay?.notes === 'AWAITING:ODO_START_MANUAL' && !isNaN(num)) {
     await (supabaseAdmin.from('work_days').update({ odometer_start: num, notes: null }).eq('id', activeDay.id) as any);
-    await (supabaseAdmin.from('sessions').insert({ work_day_id: activeDay.id, status: 'active' as any }) as any);
+    await (supabaseAdmin.from('sessions').insert({ work_day_id: activeDay.id, status: 'active' as any, odometer_start: odoToUse } as any) as any);
     await send(`Jornada iniciada com odômetro <b>${formatNumberBR(num)} km</b>!`, {
       ...activeJourneyMenu
     });
@@ -924,7 +922,7 @@ export const handleTelegramUpdate = async (body: any) => {
         await (supabaseAdmin.from('work_days').update({ odometer_start: num, notes: null }).eq('id', day.id) as any);
       }
       if (!day) return;
-      await (supabaseAdmin.from('sessions').insert({ work_day_id: day.id, status: 'active' as any }) as any);
+      await (supabaseAdmin.from('sessions').insert({ work_day_id: day.id, status: 'active' as any, odometer_start: num } as any) as any);
       await send('Jornada iniciada!', activeJourneyMenu);
       return;
     }
