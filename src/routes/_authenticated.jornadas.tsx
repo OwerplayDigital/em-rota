@@ -51,6 +51,16 @@ function formatTime(value?: string | null) {
   }).format(new Date(value))
 }
 
+function formatJourneyDuration(sessions: Journey[]) {
+  const ms = sessions.reduce((total, session) => {
+    if (!session.end_time) return total
+    return total + Math.max(0, new Date(session.end_time).getTime() - new Date(session.start_time).getTime())
+  }, 0)
+  const hours = Math.floor(ms / 3600000)
+  const minutes = Math.floor((ms % 3600000) / 60000)
+  return hours > 0 ? `${hours}h ${minutes}min` : `${minutes} min`
+}
+
 function JornadasPage() {
   const [journeys, setJourneys] = useState<Journey[]>([])
   const [loading, setLoading] = useState(true)
@@ -131,23 +141,7 @@ function JornadasPage() {
                   <div className="mt-2 flex items-center gap-2 text-xs font-semibold text-white/45">
                     <Clock3 className="h-4 w-4" />
                     {journey.sessions.length > 1
-                      ? `${journey.sessions.length} jornadas · ${journey.sessions.reduce((total, s) => {
-                          if (!s.end_time) return total
-                          return total + Math.max(0, new Date(s.end_time).getTime() - new Date(s.start_time).getTime())
-                        }, 0) / 3600000 < 1
-                          ? Math.round(journey.sessions.reduce((total, s) => {
-                              if (!s.end_time) return total
-                              return total + Math.max(0, new Date(s.end_time).getTime() - new Date(s.start_time).getTime())
-                            }, 0) / 60000) + ' min'
-                          : (() => {
-                              const ms = journey.sessions.reduce((total, s) => {
-                                if (!s.end_time) return total
-                                return total + Math.max(0, new Date(s.end_time).getTime() - new Date(s.start_time).getTime())
-                              }, 0)
-                              const h = Math.floor(ms / 3600000)
-                              const m = Math.floor((ms % 3600000) / 60000)
-                              return `${h}h ${m}min`
-                            })()`
+                      ? `${journey.sessions.length} jornadas · ${formatJourneyDuration(journey.sessions)}`
                       : `${formatTime(journey.start_time)} → ${formatTime(journey.end_time)}`}
                   </div>
                 </div>
