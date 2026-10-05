@@ -24,8 +24,8 @@ type Journey = {
   start_time: string
   end_time: string | null
   status: 'active' | 'completed'
-  odometer_start: number | null
-  odometer_end: number | null
+  odometer_start?: number | null
+  odometer_end?: number | null
   work_days?: WorkDay | null
 }
 
@@ -72,7 +72,7 @@ function JornadasPage() {
     setLoading(true)
     const { data, error } = await supabase
       .from('sessions')
-      .select('id, work_day_id, start_time, end_time, status, odometer_start, odometer_end, work_days(id, date, status, odometer_start, odometer_end, ifood_earned, uber_earned, total_earned, total_deliveries)')
+      .select('id, work_day_id, start_time, end_time, status, work_days(id, date, status, odometer_start, odometer_end, ifood_earned, uber_earned, total_earned, total_deliveries)')
       .eq('status', 'completed')
       .order('start_time', { ascending: false })
       .limit(50)
