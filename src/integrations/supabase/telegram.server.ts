@@ -104,6 +104,35 @@ export const handleTelegramUpdate = async (body: any) => {
     return activeRes.data;
   };
 
+  const createActiveSession = async (workDayId: string, odometerStart: number) => {
+    const primary = await (supabaseAdmin
+      .from('sessions')
+      .insert({ work_day_id: workDayId, status: 'active' as any, odometer_start: odometerStart } as any)
+      .select()
+      .single() as any);
+
+    if (!primary.error && primary.data) {
+      return { data: primary.data, error: null, hasSessionOdometer: true };
+    }
+
+    console.error('Failed to create active session with odometer:', primary.error);
+
+    // Compatibilidade com bancos onde a migration de odômetro por jornada
+    // ainda não foi aplicada. Se o primeiro insert falhar, tenta o formato antigo.
+    const fallback = await (supabaseAdmin
+      .from('sessions')
+      .insert({ work_day_id: workDayId, status: 'active' as any } as any)
+      .select()
+      .single() as any);
+
+    if (!fallback.error && fallback.data) {
+      return { data: fallback.data, error: null, hasSessionOdometer: false };
+    }
+
+    console.error('Failed to create active session fallback:', fallback.error);
+    return { data: null, error: fallback.error ?? primary.error, hasSessionOdometer: false };
+  };
+
   const getSummary = async (day: any) => {
     const { data: sessions } = await (supabaseAdmin.from('sessions').select('*').eq('work_day_id', day.id).eq('status', 'completed' as any) as any);
     
@@ -637,23 +666,34 @@ export const handleTelegramUpdate = async (body: any) => {
       await send('A jornada não está mais ativa.', mainMenu);
       return;
     }
-    const sessionStartOdo = Number(activeSession.odometer_start);
+    const sessionStartOdo = Number(activeSession.odometer_start ?? activeDay.odometer_start);
     if (isNaN(num) || isNaN(sessionStartOdo) || num < sessionStartOdo) {
       await send('Odômetro final inválido. Ele não pode ser menor que o inicial desta jornada.', cancelMenu);
       return;
     }
     const endTime = new Date().toISOString();
-    const { error } = await (supabaseAdmin.from('sessions').update({ odometer_end: num, end_time: endTime, status: 'completed' as any }).eq('id', activeSession.id).eq('status', 'active' as any) as any);
-    if (error) {
-      console.error('Failed to end journey with odometer:', error);
+    let sessionOdometerStored = true;
+    let endResult = await (supabaseAdmin.from('sessions').update({ odometer_end: num, end_time: endTime, status: 'completed' as any }).eq('id', activeSession.id).eq('status', 'active' as any) as any);
+    if (endResult.error) {
+      console.error('Failed to end journey with odometer, trying compatibility mode:', endResult.error);
+      sessionOdometerStored = false;
+      endResult = await (supabaseAdmin.from('sessions').update({ end_time: endTime, status: 'completed' as any }).eq('id', activeSession.id).eq('status', 'active' as any) as any);
+    }
+    if (endResult.error) {
+      console.error('Failed to end journey:', endResult.error);
       await send('Não foi possível encerrar a jornada. Tente novamente.', activeJourneyMenu);
       return;
     }
-    const { data: completedSessions } = await (supabaseAdmin.from('sessions').select('*').eq('work_day_id', activeDay.id).eq('status', 'completed' as any) as any);
-    const valid = (completedSessions || []).filter((s:any) => s.odometer_start != null && s.odometer_end != null);
-    const totalKm = valid.reduce((sum:number,s:any) => sum + Math.max(0, Number(s.odometer_end)-Number(s.odometer_start)),0);
-    const firstOdo = valid.length ? Number(valid[0].odometer_start) : sessionStartOdo;
-    await (supabaseAdmin.from('work_days').update({ odometer_start: firstOdo, odometer_end: firstOdo + totalKm, notes: null }).eq('id', activeDay.id) as any);
+
+    if (sessionOdometerStored) {
+      const { data: completedSessions } = await (supabaseAdmin.from('sessions').select('*').eq('work_day_id', activeDay.id).eq('status', 'completed' as any) as any);
+      const valid = (completedSessions || []).filter((s:any) => s.odometer_start != null && s.odometer_end != null);
+      const totalKm = valid.reduce((sum:number,s:any) => sum + Math.max(0, Number(s.odometer_end)-Number(s.odometer_start)),0);
+      const firstOdo = valid.length ? Number(valid[0].odometer_start) : sessionStartOdo;
+      await (supabaseAdmin.from('work_days').update({ odometer_start: firstOdo, odometer_end: firstOdo + totalKm, notes: null }).eq('id', activeDay.id) as any);
+    } else {
+      await (supabaseAdmin.from('work_days').update({ odometer_end: num, notes: null }).eq('id', activeDay.id) as any);
+    }
     const duration = new Date(endTime).getTime() - new Date(activeSession.start_time).getTime();
     await send('<b>JORNADA ENCERRADA</b>\n\nOdômetro: ' + formatNumberBR(sessionStartOdo) + ' → ' + formatNumberBR(num) + ' km\nDistância desta jornada: <b>' + formatNumberBR(num-sessionStartOdo) + ' km</b>\nDuração: ' + formatDuration(duration), {
       keyboard: [[{ text: 'INICIAR JORNADA' }, { text: 'FECHAR DIA' }], [{ text: 'MENU' }]],
@@ -739,16 +779,36 @@ export const handleTelegramUpdate = async (body: any) => {
     }
 
     if (odoToUse !== null) {
-      await (supabaseAdmin.from('work_days').update({ odometer_start: odoToUse, notes: null }).eq('id', activeDay.id) as any);
-      await (supabaseAdmin.from('sessions').insert({ work_day_id: activeDay.id, status: 'active' as any, odometer_start: odoToUse } as any) as any);
+      const created = await createActiveSession(activeDay.id, odoToUse);
+      if (!created.data) {
+        await send('Não foi possível iniciar a jornada. Tente novamente em alguns segundos.', mainMenu);
+        return;
+      }
+      const { error: dayError } = await (supabaseAdmin.from('work_days').update({ odometer_start: odoToUse, notes: null }).eq('id', activeDay.id) as any);
+      if (dayError) {
+        console.error('Failed to update work day after session start:', dayError);
+        await (supabaseAdmin.from('sessions').delete().eq('id', created.data.id) as any);
+        await send('Não foi possível iniciar a jornada. Tente novamente.', mainMenu);
+        return;
+      }
       await send(`Jornada iniciada com odômetro <b>${formatNumberBR(odoToUse)} km</b>!`, activeJourneyMenu);
       return;
     }
   }
 
   if (activeDay?.notes === 'AWAITING:ODO_START_MANUAL' && !isNaN(num)) {
-    await (supabaseAdmin.from('work_days').update({ odometer_start: num, notes: null }).eq('id', activeDay.id) as any);
-    await (supabaseAdmin.from('sessions').insert({ work_day_id: activeDay.id, status: 'active' as any, odometer_start: num } as any) as any);
+    const created = await createActiveSession(activeDay.id, num);
+    if (!created.data) {
+      await send('Não foi possível iniciar a jornada. Tente novamente em alguns segundos.', mainMenu);
+      return;
+    }
+    const { error: dayError } = await (supabaseAdmin.from('work_days').update({ odometer_start: num, notes: null }).eq('id', activeDay.id) as any);
+    if (dayError) {
+      console.error('Failed to update work day after manual session start:', dayError);
+      await (supabaseAdmin.from('sessions').delete().eq('id', created.data.id) as any);
+      await send('Não foi possível iniciar a jornada. Tente novamente.', mainMenu);
+      return;
+    }
     await send(`Jornada iniciada com odômetro <b>${formatNumberBR(num)} km</b>!`, {
       ...activeJourneyMenu
     });
@@ -922,7 +982,11 @@ export const handleTelegramUpdate = async (body: any) => {
         await (supabaseAdmin.from('work_days').update({ odometer_start: num, notes: null }).eq('id', day.id) as any);
       }
       if (!day) return;
-      await (supabaseAdmin.from('sessions').insert({ work_day_id: day.id, status: 'active' as any, odometer_start: num } as any) as any);
+      const created = await createActiveSession(day.id, num);
+      if (!created.data) {
+        await send('Não foi possível iniciar a jornada. Tente novamente em alguns segundos.', mainMenu);
+        return;
+      }
       await send('Jornada iniciada!', activeJourneyMenu);
       return;
     }
