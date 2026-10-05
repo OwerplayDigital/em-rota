@@ -182,7 +182,7 @@ export const handleTelegramUpdate = async (body: any) => {
   const activeJourneyMenu = {
     keyboard: [
       [{ text: 'LANÇAR IFOOD' }, { text: 'IFOOD DUPLA' }],
-      [{ text: 'LANÇAR UBER' }],
+      [{ text: 'LANÇAR UBER' }, { text: 'CORRIGIR ÚLTIMO' }],
       [{ text: 'ATUALIZAR KM' }],
       [{ text: 'ENCERRAR JORNADA' }, { text: 'CANCELAR JORNADA' }],
       [{ text: 'MENU' }]
@@ -239,11 +239,29 @@ export const handleTelegramUpdate = async (body: any) => {
   }
 
   if (textInput === 'CANCELAR' || textInput === 'VOLTAR') {
-    // Reset correction state if any
-    if (activeDay?.notes?.includes('CORRECT:') || activeDay?.notes?.includes('AWAITING:') || activeDay?.notes?.includes('ADDSESSION:') || activeDay?.notes?.includes('DELETE_SESSION:')) {
+    if (activeDay?.notes?.startsWith('LIVE:CORRECT_LAST:')) {
+      const parts = activeDay.notes.split(':');
+      const platform = parts[2];
+      const oldCents = parts[3];
+      const deliveryCount = parts[4];
+      await (supabaseAdmin.from('work_days').update({ notes: `LAST:EARNED:${platform}:${oldCents}:${deliveryCount}` }).eq('id', activeDay.id) as any);
+      await send('Correção cancelada. O lançamento original foi mantido.', activeSession ? activeJourneyMenu : mainMenu);
+      return;
+    }
+
+    // Limpa estados temporários para não deixar o próximo número preso em um fluxo cancelado.
+    if (
+      activeDay?.notes?.includes('CORRECT:') ||
+      activeDay?.notes?.includes('AWAITING:') ||
+      activeDay?.notes?.includes('ADDSESSION:') ||
+      activeDay?.notes?.includes('DELETE_SESSION:') ||
+      activeDay?.notes?.startsWith('LIVE:EARNED:') ||
+      activeDay?.notes === 'LIVE:ODO' ||
+      activeDay?.notes === 'LIVE:SESSION_ODO_END'
+    ) {
       await (supabaseAdmin.from('work_days').update({ notes: null }).eq('id', activeDay.id) as any);
     }
-    await send('Operação cancelada.', mainMenu);
+    await send('Operação cancelada.', activeSession ? activeJourneyMenu : mainMenu);
     return;
   }
 
@@ -261,6 +279,42 @@ export const handleTelegramUpdate = async (body: any) => {
       return;
     }
     await send(`${platform === 'IFOOD' ? 'iFood' : 'Uber'}:`, cancelMenu);
+    return;
+  }
+
+  if (textInput === 'CORRIGIR ÚLTIMO') {
+    if (!activeSession || !activeDay) {
+      await send('Inicie uma jornada antes de corrigir um lançamento.', mainMenu);
+      return;
+    }
+
+    if (!activeDay.notes?.startsWith('LAST:EARNED:')) {
+      await send('Não há um último lançamento disponível para corrigir. Essa opção vale para o lançamento mais recente feito nesta jornada.', activeJourneyMenu);
+      return;
+    }
+
+    const parts = activeDay.notes.split(':');
+    const platform = parts[2];
+    const oldCents = Number(parts[3]) || 0;
+    const deliveryCount = Math.max(1, Number(parts[4]) || 1);
+
+    const { error } = await (supabaseAdmin
+      .from('work_days')
+      .update({ notes: `LIVE:CORRECT_LAST:${platform}:${oldCents}:${deliveryCount}` })
+      .eq('id', activeDay.id) as any);
+
+    if (error) {
+      console.error('Failed to prepare last earning correction:', error);
+      await send('Não foi possível preparar a correção. Tente novamente.', activeJourneyMenu);
+      return;
+    }
+
+    const platformName = platform === 'IFOOD' ? 'iFood' : 'Uber';
+    const kind = deliveryCount === 2 ? 'entrega dupla' : 'entrega';
+    await send(
+      `Último lançamento: <b>${platformName}</b> · ${kind} · <b>${formatCurrency(fromCents(oldCents))}</b>\n\nQual é o valor correto?`,
+      cancelMenu
+    );
     return;
   }
 
@@ -702,6 +756,63 @@ export const handleTelegramUpdate = async (body: any) => {
     return;
   }
 
+  if (activeDay?.notes?.startsWith('LIVE:CORRECT_LAST:')) {
+    if (!activeSession) {
+      await (supabaseAdmin.from('work_days').update({ notes: null }).eq('id', activeDay.id) as any);
+      await send('A jornada não está mais ativa. Nenhuma correção foi feita.', mainMenu);
+      return;
+    }
+    if (isNaN(num) || num < 0) {
+      await send('⚠️ Valor inválido. Informe o valor correto, por exemplo: 18,50', cancelMenu);
+      return;
+    }
+
+    const parts = activeDay.notes.split(':');
+    const platform = parts[2];
+    const oldCents = Math.max(0, Number(parts[3]) || 0);
+    const deliveryCount = Math.max(1, Number(parts[4]) || 1);
+    const newCents = toCents(num);
+
+    const currentIfoodCents = toCents(activeDay.ifood_earned);
+    const currentUberCents = toCents(activeDay.uber_earned);
+    const nextIfoodCents = platform === 'IFOOD'
+      ? Math.max(0, currentIfoodCents - oldCents + newCents)
+      : currentIfoodCents;
+    const nextUberCents = platform === 'UBER'
+      ? Math.max(0, currentUberCents - oldCents + newCents)
+      : currentUberCents;
+
+    const update = {
+      ifood_earned: fromCents(nextIfoodCents),
+      uber_earned: fromCents(nextUberCents),
+      total_earned: fromCents(nextIfoodCents + nextUberCents),
+      notes: `LAST:EARNED:${platform}:${newCents}:${deliveryCount}`
+    };
+
+    const { data, error } = await (supabaseAdmin
+      .from('work_days')
+      .update(update)
+      .eq('id', activeDay.id)
+      .select()
+      .single() as any);
+
+    if (error || !data) {
+      console.error('Failed to correct last live earning:', error);
+      await send('Não foi possível corrigir o último lançamento. Tente novamente.', activeJourneyMenu);
+      return;
+    }
+
+    const platformName = platform === 'IFOOD' ? 'iFood' : 'Uber';
+    await send(
+      `<b>LANÇAMENTO CORRIGIDO</b>\n\n${platformName}: ${formatCurrency(fromCents(oldCents))} → <b>${formatCurrency(fromCents(newCents))}</b>\n\n` +
+      `iFood: ${formatCurrency(data.ifood_earned)} · ${data.ifood_deliveries ?? 0} entrega(s)\n` +
+      `Uber: ${formatCurrency(data.uber_earned)} · ${data.uber_deliveries ?? 0} entrega(s)\n` +
+      `<b>Total: ${formatCurrency(data.total_earned)} · ${data.total_deliveries ?? 0} entrega(s)</b>`,
+      activeJourneyMenu
+    );
+    return;
+  }
+
   if (activeDay?.notes?.startsWith('LIVE:EARNED:')) {
     if (!activeSession) {
       await (supabaseAdmin.from('work_days').update({ notes: null }).eq('id', activeDay.id) as any);
@@ -728,7 +839,7 @@ export const handleTelegramUpdate = async (body: any) => {
       ifood_deliveries: nextIfoodDeliveries,
       uber_deliveries: nextUberDeliveries,
       total_deliveries: nextIfoodDeliveries + nextUberDeliveries,
-      notes: null
+      notes: `LAST:EARNED:${platform}:${addCents}:${deliveryCount}`
     };
     const { data, error } = await (supabaseAdmin.from('work_days').update(update).eq('id', activeDay.id).select().single() as any);
     if (error || !data) {
