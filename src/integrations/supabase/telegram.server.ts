@@ -187,7 +187,9 @@ export const handleTelegramUpdate = async (body: any) => {
       [{ text: 'ENCERRAR JORNADA' }, { text: 'CANCELAR JORNADA' }],
       [{ text: 'MENU' }]
     ],
-    resize_keyboard: true
+    resize_keyboard: true,
+    one_time_keyboard: false,
+    is_persistent: true
   };
 
   const closedDayMenu = {
@@ -446,10 +448,7 @@ export const handleTelegramUpdate = async (body: any) => {
   }
 
   if (textInput === 'NÃO, VOLTAR') {
-    await send('Operação cancelada. A jornada continua em andamento.', {
-      keyboard: [[{ text: 'ENCERRAR JORNADA' }, { text: 'CANCELAR JORNADA' }], [{ text: 'MENU' }]],
-      resize_keyboard: true
-    });
+    await send('Operação cancelada. A jornada continua em andamento.', activeJourneyMenu);
     return;
   }
 
