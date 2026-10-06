@@ -149,3 +149,29 @@
 #lovable-badge {
   display: none !important;
 }
+
+
+:root {
+  --tg-safe-top: 0px;
+  --tg-safe-bottom: 0px;
+  --tg-safe-left: 0px;
+  --tg-safe-right: 0px;
+}
+
+html.telegram-mini-app,
+body.telegram-mini-app {
+  background: #111216;
+  overscroll-behavior: none;
+}
+
+.telegram-mini-app-shell {
+  min-height: 100dvh;
+  padding-top: var(--tg-safe-top);
+  padding-right: var(--tg-safe-right);
+  padding-bottom: var(--tg-safe-bottom);
+  padding-left: var(--tg-safe-left);
+}
+
+.telegram-mini-app #lovable-badge {
+  display: none !important;
+}
