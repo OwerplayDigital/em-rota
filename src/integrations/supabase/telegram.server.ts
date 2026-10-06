@@ -171,10 +171,13 @@ export const handleTelegramUpdate = async (body: any) => {
       goalStr;
   };
 
+  const webAppButton = { text: 'ABRIR APP', web_app: { url: 'https://em-rota.lovable.app' } };
+
   const mainMenu = {
     keyboard: [
       [{ text: 'INICIAR JORNADA' }, { text: 'ENCERRAR JORNADA' }],
-      [{ text: 'FECHAR DIA' }, { text: 'CORRIGIR DIA' }]
+      [{ text: 'FECHAR DIA' }, { text: 'CORRIGIR DIA' }],
+      [webAppButton]
     ],
     resize_keyboard: true
   };
@@ -185,6 +188,7 @@ export const handleTelegramUpdate = async (body: any) => {
       [{ text: 'LANÇAR UBER' }, { text: 'CORRIGIR ÚLTIMO' }],
       [{ text: 'ATUALIZAR KM' }],
       [{ text: 'ENCERRAR JORNADA' }, { text: 'CANCELAR JORNADA' }],
+      [webAppButton],
       [{ text: 'MENU' }]
     ],
     resize_keyboard: true,
@@ -196,6 +200,7 @@ export const handleTelegramUpdate = async (body: any) => {
     keyboard: [
       [{ text: 'REABRIR DIA' }],
       [{ text: 'CORRIGIR DIA' }],
+      [webAppButton],
       [{ text: 'MENU' }]
     ],
     resize_keyboard: true
