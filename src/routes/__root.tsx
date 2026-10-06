@@ -13,6 +13,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Sidebar } from "@/components/layout/sidebar";
 import { cn } from "@/lib/utils";
+import { initTelegramMiniApp, isTelegramMiniApp, getTelegramWebApp } from "@/lib/telegram-webapp";
 
 function NotFoundComponent() {
   return (
@@ -125,11 +126,42 @@ function RootComponent() {
   const pathname = router.state.location.pathname;
   const isPublicRoute = pathname === '/' || pathname === '/auth' || pathname.startsWith('/api');
   const isNewInternalLayout = pathname === '/dashboard' || pathname === '/historico' || pathname === '/jornadas' || pathname === '/desempenho';
+  const telegramMiniApp = isTelegramMiniApp();
+
+  useEffect(() => {
+    return initTelegramMiniApp() ?? undefined;
+  }, []);
+
+  useEffect(() => {
+    const webApp = getTelegramWebApp();
+    const backButton = webApp?.BackButton;
+    if (!telegramMiniApp || !backButton) return;
+
+    const isRootScreen = pathname === '/dashboard' || pathname === '/';
+    const handleBack = () => {
+      if (window.history.length > 1) {
+        window.history.back();
+      } else {
+        router.navigate({ to: '/dashboard' });
+      }
+    };
+
+    if (isRootScreen) {
+      backButton.hide();
+    } else {
+      backButton.show();
+      backButton.onClick(handleBack);
+    }
+
+    return () => {
+      backButton.offClick(handleBack);
+    };
+  }, [pathname, router, telegramMiniApp]);
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div className={cn("min-h-screen bg-background transition-colors duration-500", !isPublicRoute && !isNewInternalLayout && "md:pl-64")}>
-        {!isPublicRoute && !isNewInternalLayout && <Sidebar />}
+      <div className={cn("min-h-screen bg-background transition-colors duration-500", !isPublicRoute && !isNewInternalLayout && "md:pl-64", telegramMiniApp && "telegram-mini-app-shell")}>
+        {!isPublicRoute && !isNewInternalLayout && !telegramMiniApp && <Sidebar />}
         <main className="relative z-10">
           <Outlet />
         </main>
