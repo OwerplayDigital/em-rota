@@ -27,7 +27,7 @@ function DashboardPage() {
   const elapsed = previousSessionsMs + currentSessionMs
   const daySessions = day ? data.sessions.filter((s:any) => s.work_day_id === day.id) : []
   const sessionKm = daySessions.filter((s:any) => s.odometer_start != null && s.odometer_end != null).reduce((sum:number,s:any) => sum + Math.max(0,Number(s.odometer_end)-Number(s.odometer_start)),0)
-  const currentSessionStartOdo = session?.odometer_start ?? day?.odometer_start
+  const currentSessionStartOdo = (session as any)?.odometer_start ?? day?.odometer_start
   const currentKm = currentSessionStartOdo != null && day?.odometer_end != null ? Math.max(0,Number(day.odometer_end)-Number(currentSessionStartOdo)) : 0
   const km = sessionKm + currentKm
   const last = data.lastCompletedDay
