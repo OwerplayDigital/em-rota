@@ -87,7 +87,6 @@ function AuthPage() {
         }))
 
         const { data, error } = await supabase.auth.verifyOtp({
-          email: login.email,
           token_hash: login.tokenHash,
           type: 'magiclink',
         })
