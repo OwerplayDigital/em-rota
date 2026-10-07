@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, useSearch } from '@tanstack/react-router'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/integrations/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -9,6 +9,8 @@ import { toast } from 'sonner'
 import { motion } from 'framer-motion'
 import { LogIn, Mail, Lock } from 'lucide-react'
 import { z } from 'zod'
+import { getTelegramWebApp } from '@/lib/telegram-webapp'
+import { createTelegramMiniAppLogin } from '@/lib/telegram-miniapp.functions'
 
 export const Route = createFileRoute('/auth')({
   validateSearch: z.object({
@@ -24,18 +26,61 @@ function AuthPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [telegramLogin, setTelegramLogin] = useState(false)
+  const [telegramError, setTelegramError] = useState<string | null>(null)
+  const telegramAttempted = useRef(false)
 
   useEffect(() => {
     if (search.error) {
       toast.error(search.error)
     }
-    
-    // Check if already logged in
-    supabase.auth.getSession().then(({ data: { session } }) => {
+
+    let cancelled = false
+
+    const bootstrap = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (cancelled) return
+
       if (session && session.user.email === 'owertech82@gmail.com') {
         navigate({ to: search.redirect || '/dashboard' })
+        return
       }
-    })
+
+      const initData = getTelegramWebApp()?.initData
+      if (!initData || telegramAttempted.current) return
+
+      telegramAttempted.current = true
+      setTelegramLogin(true)
+      setTelegramError(null)
+
+      try {
+        const login = await createTelegramMiniAppLogin({ data: { initData } })
+        const { data, error } = await supabase.auth.verifyOtp({
+          email: login.email,
+          token_hash: login.tokenHash,
+          type: 'magiclink',
+        })
+
+        if (error) throw error
+        if (data.user?.email !== 'owertech82@gmail.com') {
+          await supabase.auth.signOut()
+          throw new Error('Acesso não autorizado.')
+        }
+
+        if (!cancelled) {
+          navigate({ to: search.redirect || '/dashboard' })
+        }
+      } catch (error: any) {
+        console.error('Telegram Mini App login failed:', error)
+        if (!cancelled) {
+          setTelegramError(error?.message || 'Não foi possível entrar pelo Telegram.')
+          setTelegramLogin(false)
+        }
+      }
+    }
+
+    bootstrap()
+    return () => { cancelled = true }
   }, [search.error, navigate, search.redirect])
 
   const handleAuth = async (e: React.FormEvent) => {
@@ -91,6 +136,19 @@ function AuthPage() {
             </div>
           </CardHeader>
           <CardContent className="px-8 pb-10 pt-2">
+            {telegramLogin ? (
+              <div className="py-10 text-center">
+                <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-primary/20 border-t-primary" />
+                <p className="mt-5 text-sm font-semibold text-foreground">Entrando pelo Telegram...</p>
+                <p className="mt-2 text-xs text-muted-foreground">Validando seu acesso ao Em Rota.</p>
+              </div>
+            ) : (
+            <>
+            {telegramError && (
+              <div className="mb-5 rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+                {telegramError}
+              </div>
+            )}
             <form onSubmit={handleAuth} className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] ml-1">
@@ -145,6 +203,8 @@ function AuthPage() {
                 Apenas usuários autorizados podem acessar.
               </p>
             </div>
+            </>
+            )}
           </CardContent>
         </Card>
       </motion.div>
