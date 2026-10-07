@@ -207,7 +207,6 @@ export const handleTelegramUpdate = async (body: any) => {
     keyboard: [
       [{ text: 'REABRIR DIA' }],
       [{ text: 'CORRIGIR DIA' }],
-      [webAppButton],
       [{ text: 'MENU' }]
     ],
     resize_keyboard: true
