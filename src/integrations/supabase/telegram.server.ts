@@ -731,7 +731,7 @@ export const handleTelegramUpdate = async (body: any) => {
     }
     const endTime = new Date().toISOString();
     let sessionOdometerStored = true;
-    let endResult = await (supabaseAdmin.from('sessions').update({ odometer_end: num, end_time: endTime, status: 'completed' as any }).eq('id', activeSession.id).eq('status', 'active' as any) as any);
+    let endResult = await (supabaseAdmin.from('sessions').update({ odometer_end: num, end_time: endTime, status: 'completed' } as any).eq('id', activeSession.id).eq('status', 'active' as any) as any);
     if (endResult.error) {
       console.error('Failed to end journey with odometer, trying compatibility mode:', endResult.error);
       sessionOdometerStored = false;
