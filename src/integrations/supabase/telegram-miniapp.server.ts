@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { supabaseAdmin } from "./client.server";
 
 export function validateTelegramMiniAppInitData(initData: string) {
   const botToken = process.env["TELEGRAM_BOT_TOKEN"];
@@ -48,4 +49,26 @@ export function validateTelegramMiniAppInitData(initData: string) {
   }
 
   return { success: true, userId: String(user.id), firstName: user.first_name ?? null };
+}
+
+
+const MINI_APP_EMAIL = "owertech82@gmail.com";
+
+export async function createTelegramMiniAppLogin(initData: string) {
+  validateTelegramMiniAppInitData(initData);
+
+  const { data, error } = await supabaseAdmin.auth.admin.generateLink({
+    type: "magiclink",
+    email: MINI_APP_EMAIL,
+  });
+
+  if (error) {
+    console.error("Failed to generate Mini App login:", error);
+    throw new Error("Não foi possível criar a sessão do Em Rota.");
+  }
+
+  const tokenHash = data?.properties?.hashed_token;
+  if (!tokenHash) throw new Error("Token de sessão não foi gerado.");
+
+  return { email: MINI_APP_EMAIL, tokenHash };
 }
