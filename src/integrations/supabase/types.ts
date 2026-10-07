@@ -19,8 +19,6 @@ export type Database = {
           created_at: string | null
           end_time: string | null
           id: string
-          odometer_end: number | null
-          odometer_start: number | null
           start_time: string
           status: Database["public"]["Enums"]["session_status"]
           updated_at: string | null
@@ -30,8 +28,6 @@ export type Database = {
           created_at?: string | null
           end_time?: string | null
           id?: string
-          odometer_end?: number | null
-          odometer_start?: number | null
           start_time?: string
           status?: Database["public"]["Enums"]["session_status"]
           updated_at?: string | null
@@ -41,8 +37,6 @@ export type Database = {
           created_at?: string | null
           end_time?: string | null
           id?: string
-          odometer_end?: number | null
-          odometer_start?: number | null
           start_time?: string
           status?: Database["public"]["Enums"]["session_status"]
           updated_at?: string | null

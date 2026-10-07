@@ -100,7 +100,7 @@ function JornadasPage() {
           start_time: journey.start_time,
           end_time: journey.end_time,
           sessions: [journey],
-          work_days: journey.work_days,
+          work_days: journey.work_days ?? null,
         }
       } else {
         existing.sessions.push(journey)

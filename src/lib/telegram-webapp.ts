@@ -84,7 +84,7 @@ function applySafeArea(webApp: TelegramWebApp) {
 
 export function initTelegramMiniApp() {
   const webApp = getTelegramWebApp()
-  if (!webApp && !getTelegramInitData()) return null
+  if (!webApp) return null
 
   document.documentElement.classList.add('telegram-mini-app')
   document.body.classList.add('telegram-mini-app')
