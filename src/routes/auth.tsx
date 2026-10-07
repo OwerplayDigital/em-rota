@@ -9,7 +9,7 @@ import { toast } from 'sonner'
 import { motion } from 'framer-motion'
 import { LogIn, Mail, Lock } from 'lucide-react'
 import { z } from 'zod'
-import { getTelegramWebApp } from '@/lib/telegram-webapp'
+import { waitForTelegramInitData } from '@/lib/telegram-webapp'
 import { createTelegramMiniAppLogin } from '@/lib/telegram-miniapp.functions'
 
 export const Route = createFileRoute('/auth')({
@@ -46,8 +46,9 @@ function AuthPage() {
         return
       }
 
-      const initData = getTelegramWebApp()?.initData
-      if (!initData || telegramAttempted.current) return
+      if (telegramAttempted.current) return
+      const initData = await waitForTelegramInitData(3000)
+      if (!initData) return
 
       telegramAttempted.current = true
       setTelegramLogin(true)
