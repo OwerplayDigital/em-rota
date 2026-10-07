@@ -171,7 +171,7 @@ export const handleTelegramUpdate = async (body: any) => {
       goalStr;
   };
 
-  const webAppButton = { text: 'ABRIR APP', web_app: { url: 'https://em-rota.lovable.app/dashboard' } };
+  const webAppButton = { text: 'ABRIR APP', web_app: { url: 'https://em-rota.lovable.app/auth?redirect=%2Fdashboard' } };
 
   const mainMenu = {
     keyboard: [
