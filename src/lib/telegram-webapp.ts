@@ -33,9 +33,42 @@ export function getTelegramWebApp(): TelegramWebApp | null {
   return window.Telegram?.WebApp ?? null
 }
 
+export function getTelegramInitData(): string {
+  if (typeof window === 'undefined') return ''
+
+  const sdkInitData = window.Telegram?.WebApp?.initData
+  if (sdkInitData) return sdkInitData
+
+  const readParam = (raw: string) => {
+    const normalized = raw.startsWith('#') || raw.startsWith('?') ? raw.slice(1) : raw
+    const params = new URLSearchParams(normalized)
+    return params.get('tgWebAppData') || params.get('initData') || ''
+  }
+
+  const fromHash = readParam(window.location.hash)
+  if (fromHash) return fromHash
+
+  const fromSearch = readParam(window.location.search)
+  if (fromSearch) return fromSearch
+
+  return ''
+}
+
+export async function waitForTelegramInitData(timeoutMs = 2500): Promise<string> {
+  const startedAt = Date.now()
+
+  while (Date.now() - startedAt < timeoutMs) {
+    const initData = getTelegramInitData()
+    if (initData) return initData
+    await new Promise((resolve) => setTimeout(resolve, 100))
+  }
+
+  return getTelegramInitData()
+}
+
 export function isTelegramMiniApp(): boolean {
-  const webApp = getTelegramWebApp()
-  return Boolean(webApp?.initData)
+  if (typeof window === 'undefined') return false
+  return Boolean(getTelegramInitData() || window.Telegram?.WebApp || /Telegram/i.test(navigator.userAgent))
 }
 
 function applySafeArea(webApp: TelegramWebApp) {
@@ -51,7 +84,7 @@ function applySafeArea(webApp: TelegramWebApp) {
 
 export function initTelegramMiniApp() {
   const webApp = getTelegramWebApp()
-  if (!webApp?.initData) return null
+  if (!webApp && !getTelegramInitData()) return null
 
   document.documentElement.classList.add('telegram-mini-app')
   document.body.classList.add('telegram-mini-app')
