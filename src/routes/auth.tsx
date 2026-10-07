@@ -9,7 +9,7 @@ import { toast } from 'sonner'
 import { motion } from 'framer-motion'
 import { LogIn, Mail, Lock } from 'lucide-react'
 import { z } from 'zod'
-import { waitForTelegramInitData } from '@/lib/telegram-webapp'
+import { waitForTelegramInitData, getTelegramWebApp } from '@/lib/telegram-webapp'
 import { createTelegramMiniAppLogin } from '@/lib/telegram-miniapp.functions'
 
 export const Route = createFileRoute('/auth')({
@@ -28,6 +28,12 @@ function AuthPage() {
   const [loading, setLoading] = useState(false)
   const [telegramLogin, setTelegramLogin] = useState(false)
   const [telegramError, setTelegramError] = useState<string | null>(null)
+  const [telegramDebug, setTelegramDebug] = useState({
+    detected: false,
+    initData: 'aguardando',
+    serverValidation: 'não iniciado',
+    supabaseSession: 'não iniciado',
+  })
   const telegramAttempted = useRef(false)
 
   useEffect(() => {
@@ -38,6 +44,11 @@ function AuthPage() {
     let cancelled = false
 
     const bootstrap = async () => {
+      setTelegramDebug((prev) => ({
+        ...prev,
+        detected: Boolean(getTelegramWebApp()),
+      }))
+
       const { data: { session } } = await supabase.auth.getSession()
       if (cancelled) return
 
@@ -48,7 +59,20 @@ function AuthPage() {
 
       if (telegramAttempted.current) return
       const initData = await waitForTelegramInitData(6000)
-      if (!initData) return
+      if (!initData) {
+        setTelegramDebug((prev) => ({
+          ...prev,
+          initData: 'NÃO recebido',
+        }))
+        return
+      }
+
+      setTelegramDebug((prev) => ({
+        ...prev,
+        detected: true,
+        initData: 'recebido',
+        serverValidation: 'validando',
+      }))
 
       telegramAttempted.current = true
       setTelegramLogin(true)
@@ -56,13 +80,31 @@ function AuthPage() {
 
       try {
         const login = await createTelegramMiniAppLogin({ data: { initData } })
+        setTelegramDebug((prev) => ({
+          ...prev,
+          serverValidation: 'OK',
+          supabaseSession: 'criando',
+        }))
+
         const { data, error } = await supabase.auth.verifyOtp({
           email: login.email,
           token_hash: login.tokenHash,
           type: 'magiclink',
         })
 
-        if (error) throw error
+        if (error) {
+          setTelegramDebug((prev) => ({
+            ...prev,
+            supabaseSession: `ERRO: ${error.message}`,
+          }))
+          throw error
+        }
+
+        setTelegramDebug((prev) => ({
+          ...prev,
+          supabaseSession: 'OK',
+        }))
+
         if (data.user?.email !== 'owertech82@gmail.com') {
           await supabase.auth.signOut()
           throw new Error('Acesso não autorizado.')
@@ -73,6 +115,10 @@ function AuthPage() {
         }
       } catch (error: any) {
         console.error('Telegram Mini App login failed:', error)
+        setTelegramDebug((prev) => ({
+          ...prev,
+          serverValidation: prev.serverValidation === 'validando' ? `ERRO: ${error?.message || 'falha'}` : prev.serverValidation,
+        }))
         if (!cancelled) {
           setTelegramError(error?.message || 'Não foi possível entrar pelo Telegram.')
           setTelegramLogin(false)
@@ -145,6 +191,15 @@ function AuthPage() {
               </div>
             ) : (
             <>
+            <div className="mb-5 rounded-xl border border-border bg-muted/30 px-4 py-3 text-left text-xs">
+              <div className="mb-2 font-bold text-foreground">Diagnóstico do Mini App</div>
+              <div className="space-y-1 text-muted-foreground">
+                <div>Telegram detectado: <b className="text-foreground">{telegramDebug.detected ? 'SIM' : 'NÃO'}</b></div>
+                <div>initData: <b className="text-foreground">{telegramDebug.initData}</b></div>
+                <div>Validação servidor: <b className="text-foreground">{telegramDebug.serverValidation}</b></div>
+                <div>Sessão Supabase: <b className="text-foreground">{telegramDebug.supabaseSession}</b></div>
+              </div>
+            </div>
             {telegramError && (
               <div className="mb-5 rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">
                 {telegramError}
