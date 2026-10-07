@@ -171,13 +171,21 @@ export const handleTelegramUpdate = async (body: any) => {
       goalStr;
   };
 
-  const webAppButton = { text: 'ABRIR APP', web_app: { url: 'https://em-rota.lovable.app/auth?redirect=%2Fdashboard' } };
+  const webAppUrl = 'https://em-rota.lovable.app/auth?redirect=%2Fdashboard';
+  const inlineWebAppMenu = {
+    inline_keyboard: [[
+      { text: 'ABRIR APP', web_app: { url: webAppUrl } }
+    ]]
+  };
+
+  const sendWebAppShortcut = async () => {
+    await send('📱 <b>PAINEL EM ROTA</b>\nAbra o painel completo pelo botão abaixo.', inlineWebAppMenu);
+  };
 
   const mainMenu = {
     keyboard: [
       [{ text: 'INICIAR JORNADA' }, { text: 'ENCERRAR JORNADA' }],
       [{ text: 'FECHAR DIA' }, { text: 'CORRIGIR DIA' }],
-      [webAppButton]
     ],
     resize_keyboard: true
   };
@@ -188,7 +196,6 @@ export const handleTelegramUpdate = async (body: any) => {
       [{ text: 'LANÇAR UBER' }, { text: 'CORRIGIR ÚLTIMO' }],
       [{ text: 'ATUALIZAR KM' }],
       [{ text: 'ENCERRAR JORNADA' }, { text: 'CANCELAR JORNADA' }],
-      [webAppButton],
       [{ text: 'MENU' }]
     ],
     resize_keyboard: true,
@@ -242,6 +249,7 @@ export const handleTelegramUpdate = async (body: any) => {
     
     const menu = activeSession ? activeJourneyMenu : (activeDay?.status === 'completed' ? closedDayMenu : mainMenu);
     await send(`<b>EM ROTA</b>\n\n${statusMsg}`, menu);
+    await sendWebAppShortcut();
     return;
   }
 
