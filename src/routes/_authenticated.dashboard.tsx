@@ -30,7 +30,10 @@ function DashboardPage() {
   const currentSessionStartOdo = (session as any)?.odometer_start ?? day?.odometer_start
   const currentKm = currentSessionStartOdo != null && day?.odometer_end != null ? Math.max(0,Number(day.odometer_end)-Number(currentSessionStartOdo)) : 0
   const km = sessionKm + currentKm
-  const last = data.lastCompletedDay
+  // Priority for the idle dashboard:
+  // 1) today's work day (even if the journey/day is not closed yet)
+  // 2) the most recent completed day when there is no record for today
+  const last = day ?? data.lastCompletedDay
   const lastKm = last?.odometer_start != null && last?.odometer_end != null ? Math.max(0,Number(last.odometer_end)-Number(last.odometer_start)) : 0
   const goal = Number(day?.daily_goal || data.todayGoal || 0)
   const earned = Number(day?.total_earned || 0)
