@@ -47,7 +47,7 @@ function AuthPage() {
       }
 
       if (telegramAttempted.current) return
-      const initData = await waitForTelegramInitData(3000)
+      const initData = await waitForTelegramInitData(6000)
       if (!initData) return
 
       telegramAttempted.current = true
